@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment - Audio Transcriber Pro</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <div class="container">
+            <nav class="navbar">
+                <a href="index.html" class="logo">
+                    <i class="fas fa-headphones logo-icon"></i>
+                    AudioTranscriber Pro
+                </a>
+                <div class="nav-buttons">
+                    <a href="index.html" class="btn btn-outline">
+                        <i class="fas fa-arrow-left"></i> Back to Home
+                    </a>
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Payment Section -->
+    <section class="payment-container">
+        <div class="payment-card">
+            <div class="payment-header">
+                <h1>Complete Your Purchase</h1>
+                <p>You're one step away from unlocking Audio Transcriber Pro</p>
+            </div>
+
+            <div class="payment-plan">
+                <div class="plan-info">
+                    <h3 id="planName">Pro Plan</h3>
+                    <p>14-day free trial, then $<span id="planPrice">19</span>/month</p>
+                </div>
+                <div class="plan-price">$<span id="displayPrice">19</span></div>
+            </div>
+
+            <form id="paymentForm" class="payment-form">
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <input type="email" id="email" name="email" required placeholder="your@email.com">
+                </div>
+
+                <div class="form-group">
+                    <label for="cardNumber">Card Number</label>
+                    <input type="text" id="cardNumber" name="cardNumber" required placeholder="1234 5678 9012 3456" maxlength="19">
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="expiryDate">Expiry Date</label>
+                        <input type="text" id="expiryDate" name="expiryDate" required placeholder="MM/YY" maxlength="5">
+                    </div>
+                    <div class="form-group">
+                        <label for="cvc">CVC</label>
+                        <input type="text" id="cvc" name="cvc" required placeholder="123" maxlength="3">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="name">Name on Card</label>
+                    <input type="text" id="name" name="name" required placeholder="John Doe">
+                </div>
+
+                <div class="form-group">
+                    <label for="country">Country</label>
+                    <select id="country" name="country" required>
+                        <option value="">Select Country</option>
+                        <option value="US">United States</option>
+                        <option value="CA">Canada</option>
+                        <option value="UK">United Kingdom</option>
+                        <option value="AU">Australia</option>
+                        <option value="DE">Germany</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="zipCode">ZIP / Postal Code</label>
+                    <input type="text" id="zipCode" name="zipCode" required placeholder="12345">
+                </div>
+
+                <div class="form-group">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <input type="checkbox" id="terms" name="terms" required>
+                        <label for="terms" style="margin: 0;">I agree to the <a href="#" style="color: var(--primary);">Terms of Service</a> and <a href="#" style="color: var(--primary);">Privacy Policy</a></label>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center;">
+                    <i class="fas fa-lock"></i> Complete Purchase - $<span id="submitPrice">19</span>/month
+                </button>
+
+                <p style="text-align: center; color: var(--gray); font-size: 14px; margin-top: 16px;">
+                    <i class="fas fa-shield-alt"></i> Your payment is secure and encrypted
+                </p>
+            </form>
+        </div>
+    </section>
+
+    <script src="payment.js"></script>
+</body>
+</html>

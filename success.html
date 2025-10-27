@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Successful - Audio Transcriber Pro</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <div class="container">
+            <nav class="navbar">
+                <a href="index.html" class="logo">
+                    <i class="fas fa-headphones logo-icon"></i>
+                    AudioTranscriber Pro
+                </a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Success Section -->
+    <section class="success-container">
+        <div class="success-card">
+            <div class="success-icon">
+                <i class="fas fa-check"></i>
+            </div>
+            <h1>Payment Successful!</h1>
+            <p>Thank you for your purchase. Your Audio Transcriber Pro subscription has been activated.</p>
+            <p>You can now download the application and start transcribing your audio and video files.</p>
+            
+            <div style="display: flex; gap: 16px; justify-content: center; margin-top: 40px;">
+                <a href="download.html" class="btn btn-primary">
+                    <i class="fas fa-download"></i> Download Now
+                </a>
+                <a href="index.html" class="btn btn-outline">
+                    <i class="fas fa-home"></i> Back to Home
+                </a>
+            </div>
+
+            <div style="margin-top: 40px; padding: 20px; background: var(--gray-light); border-radius: var(--border-radius);">
+                <h3 style="margin-bottom: 12px; color: var(--dark);">What's Next?</h3>
+                <ul style="text-align: left; color: var(--gray); line-height: 1.8;">
+                    <li>Download and install Audio Transcriber Pro</li>
+                    <li>Launch the application and sign in with your email</li>
+                    <li>Start transcribing your audio and video files</li>
+                    <li>Access AI-powered features and analysis</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <script>
+        // Check if payment was successful
+        document.addEventListener('DOMContentLoaded', function() {
+            const paymentSuccess = sessionStorage.getItem('paymentSuccess');
+            if (!paymentSuccess) {
+                window.location.href = 'index.html';
+            }
+        });
+    </script>
+</body>
+</html>

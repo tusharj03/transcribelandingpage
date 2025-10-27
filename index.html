@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Transcriber Pro | AI-Powered Transcription Tool</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <div class="container">
+            <nav class="navbar">
+                <a href="#" class="logo">
+                    <i class="fas fa-headphones logo-icon"></i>
+                    AudioTranscriber Pro
+                </a>
+                <div class="nav-links">
+                    <a href="#features">Features</a>
+                    <a href="#how-it-works">How It Works</a>
+                    <a href="#pricing">Pricing</a>
+                    <a href="#testimonials">Testimonials</a>
+                    <a href="#faq">FAQ</a>
+                </div>
+                <div class="nav-buttons">
+                    <button class="btn btn-outline" id="loginBtn">Log In</button>
+                    <button class="btn btn-primary" id="getStartedBtn">Get Started</button>
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <div class="hero-text">
+                    <h1>Transform Audio & Video into Text with AI Precision</h1>
+                    <p>Audio Transcriber Pro converts your audio files, video recordings, and live conversations into accurate, editable text in seconds. Powered by advanced AI technology.</p>
+                    <div class="hero-buttons">
+                        <button class="btn btn-primary" id="heroDownloadBtn">
+                            <i class="fas fa-download"></i> Download Now
+                        </button>
+                        <button class="btn btn-outline" id="watchDemoBtn">
+                            <i class="fas fa-play-circle"></i> Watch Demo
+                        </button>
+                    </div>
+                </div>
+                <div class="hero-image">
+                    <img src="assets/hero-image.jpg" alt="Audio Transcriber Pro Interface">
+                    <div class="floating-card">
+                        <i class="fas fa-microphone"></i>
+                        <div>
+                            <h4>Live Recording</h4>
+                            <p>Transcribe in real-time</p>
+                        </div>
+                    </div>
+                    <div class="floating-card">
+                        <i class="fas fa-robot"></i>
+                        <div>
+                            <h4>AI Analysis</h4>
+                            <p>Smart insights</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="section" id="features">
+        <div class="container">
+            <div class="section-title">
+                <h2>Powerful Features</h2>
+                <p>Everything you need to convert audio and video to text with professional results</p>
+            </div>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-file-audio"></i>
+                    </div>
+                    <h3>Multiple Format Support</h3>
+                    <p>Transcribe MP3, WAV, M4A, MP4, MOV, and many other audio and video formats with ease.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-desktop"></i>
+                    </div>
+                    <h3>Screen Recording</h3>
+                    <p>Record your screen and get instant transcriptions of meetings, presentations, and tutorials.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <h3>AI-Powered Analysis</h3>
+                    <p>Get smart summaries, action items, and key insights automatically generated from your transcripts.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-headset"></i>
+                    </div>
+                    <h3>Live Audio Recording</h3>
+                    <p>Record live conversations, interviews, or lectures and transcribe them in real-time.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-comments"></i>
+                    </div>
+                    <h3>Chat with Transcripts</h3>
+                    <p>Ask questions about your transcripts and get instant answers powered by AI.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-history"></i>
+                    </div>
+                    <h3>History & Export</h3>
+                    <p>Access your transcription history and export in multiple formats including TXT, PDF, and DOCX.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works Section -->
+    <section class="section" id="how-it-works">
+        <div class="container">
+            <div class="section-title">
+                <h2>How It Works</h2>
+                <p>Transform your audio and video into text in just three simple steps</p>
+            </div>
+            <div class="steps">
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <h3>Upload or Record</h3>
+                    <p>Upload your audio/video files or record directly from your microphone or screen.</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <h3>AI Transcription</h3>
+                    <p>Our advanced AI processes your media and converts it to accurate text in seconds.</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <h3>Edit & Export</h3>
+                    <p>Review, edit, and export your transcripts in various formats for your needs.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pricing Section -->
+    <section class="section pricing" id="pricing">
+        <div class="container">
+            <div class="section-title">
+                <h2>Simple, Transparent Pricing</h2>
+                <p>Choose the plan that works best for you. All plans include a 14-day free trial.</p>
+            </div>
+            <div class="pricing-grid">
+                <div class="pricing-card">
+                    <div class="pricing-header">
+                        <h3 class="pricing-name">Basic</h3>
+                        <div class="pricing-price">$9</div>
+                        <div class="pricing-period">per month</div>
+                    </div>
+                    <div class="pricing-features">
+                        <div class="pricing-feature">
+                            <i class="fas fa-check"></i>
+                            <span>5 hours of transcription per month</span>
+                        </div>
+                        <div class="pricing-feature">
+                            <i class="fas fa-check"></i>
+                            <span>Audio file support</span>
+                        </div>
+                        <div class="pricing-feature">
+                            <i class="fas fa-check"></i>
+                            <span>Basic export options</span>
+                        </div>
+                        <div class="pricing-feature">
+                            <i class="fas fa-times"></i>
+                            <span>Video file support</span>
+                        </div>
+                        <div class="pricing-feature">
+                            <i class="fas fa-times"></i>
+                            <span>AI analysis features</span>
+                        </div>
+                    </div>
+                    <button class="btn btn-outline select-plan" data-plan="basic" data-price="9">Select Plan</button>
+                </div>
+                <div class="pricing-card popular">
+                    <div class="pricing-header">
+                        <h3 class="pricing-name">Pro</h3>
+                        <div class="pricing-price">$19</div>
+                        <div class="pricing-period">per month</div>
+                    </div>
+                    <div class="pricing-features">
+                        <div class="pricing-feature">
+                            <i class="fas fa-check"></i>
+                            <span>20 hours of transcription per month</span>
+                        </div>
+                        <div class="pricing-feature">
+                            <i class="fas fa-check"></i>
+                            <span>Audio & video file support</span>
+                        </div>
+                        <div class="pricing-feature">
+                            <i class="fas fa-check"></i>
+                            <span>Screen recording</span>
+                        </div>
+                        <div class="pricing-feature">
+                            <i class="fas fa-check"></i>
+                            <span>AI summaries & insights</span>
+                        </div>
+                        <div class="pricing-feature">
+                            <i class="fas fa-check"></i>
+                            <span>Priority support</span>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary select-plan" data-plan="pro" data-price="19">Select Plan</button>
+                </div>
+                <div class="pricing-card">
+                    <div class="pricing-header">
+                        <h3 class="pricing-name">Enterprise</h3>
+                        <div class="pricing-price">$49</div>
+                        <div class="pricing-period">per month</div>
+                    </div>
+                    <div class="pricing-features">
+                        <div class="pricing-feature">
+                            <i class="fas fa-check"></i>
+                            <span>Unlimited transcription</span>
+                        </div>
+                        <div class="pricing-feature">
+                            <i class="fas fa-check"></i>
+                            <span>All Pro features</span>
+                        </div>
+                        <div class="pricing-feature">
+                            <i class="fas fa-check"></i>
+                            <span>Team collaboration</span>
+                        </div>
+                        <div class="pricing-feature">
+                            <i class="fas fa-check"></i>
+                            <span>Custom vocabulary</span>
+                        </div>
+                        <div class="pricing-feature">
+                            <i class="fas fa-check"></i>
+                            <span>Dedicated account manager</span>
+                        </div>
+                    </div>
+                    <button class="btn btn-outline select-plan" data-plan="enterprise" data-price="49">Select Plan</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Testimonials Section -->
+    <section class="section testimonials" id="testimonials">
+        <div class="container">
+            <div class="section-title">
+                <h2>What Our Users Say</h2>
+                <p>Join thousands of satisfied users who have transformed their workflow with Audio Transcriber Pro</p>
+            </div>
+            <div class="testimonials-grid">
+                <div class="testimonial-card">
+                    <div class="testimonial-content">
+                        <p>"This app has completely changed how I handle interviews. What used to take hours now takes minutes with incredible accuracy."</p>
+                    </div>
+                    <div class="testimonial-author">
+                        <div class="author-avatar">SJ</div>
+                        <div class="author-info">
+                            <h4>Sarah Johnson</h4>
+                            <p>Journalist</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="testimonial-card">
+                    <div class="testimonial-content">
+                        <p>"As a researcher, I transcribe countless hours of interviews. Audio Transcriber Pro has cut my transcription time by 80%."</p>
+                    </div>
+                    <div class="testimonial-author">
+                        <div class="author-avatar">MR</div>
+                        <div class="author-info">
+                            <h4>Michael Rodriguez</h4>
+                            <p>Academic Researcher</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="testimonial-card">
+                    <div class="testimonial-content">
+                        <p>"The AI analysis features are incredible. It automatically extracts action items and summaries from our team meetings."</p>
+                    </div>
+                    <div class="testimonial-author">
+                        <div class="author-avatar">EC</div>
+                        <div class="author-info">
+                            <h4>Emily Chen</h4>
+                            <p>Product Manager</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FAQ Section -->
+    <section class="section" id="faq">
+        <div class="container">
+            <div class="section-title">
+                <h2>Frequently Asked Questions</h2>
+                <p>Find answers to common questions about Audio Transcriber Pro</p>
+            </div>
+            <div class="faq-grid">
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <h3>What audio and video formats are supported?</h3>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div class="faq-answer">
+                        <p>We support a wide range of formats including MP3, WAV, M4A, FLAC, OGG, AAC, MP4, MOV, MKV, AVI, WebM, and more. If you have a specific format not listed, contact our support team.</p>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <h3>How accurate is the transcription?</h3>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div class="faq-answer">
+                        <p>Our AI-powered transcription achieves over 95% accuracy for clear audio with a single speaker. Accuracy may vary with background noise, multiple speakers, or strong accents. All transcriptions can be easily edited within the app.</p>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <h3>Can I use it for live transcription?</h3>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div class="faq-answer">
+                        <p>Yes! Audio Transcriber Pro includes live audio recording and real-time transcription features. You can record meetings, interviews, or lectures and see the text appear as people speak.</p>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <h3>Is my data secure?</h3>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div class="faq-answer">
+                        <p>Absolutely. We take data security seriously. All files are processed locally on your device when possible, and any cloud processing uses encrypted connections. We never share or sell your data.</p>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <h3>What languages are supported?</h3>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div class="faq-answer">
+                        <p>Currently, we support English with high accuracy. Additional languages including Spanish, French, German, and Chinese are in beta testing and will be available soon.</p>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <h3>Can I cancel my subscription anytime?</h3>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div class="faq-answer">
+                        <p>Yes, you can cancel your subscription at any time. You'll continue to have access to all features until the end of your billing period.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="section">
+        <div class="container">
+            <div class="cta">
+                <h2>Ready to Transform Your Audio & Video?</h2>
+                <p>Join thousands of professionals who save hours every week with Audio Transcriber Pro</p>
+                <div class="cta-buttons">
+                    <button class="btn btn-light" id="ctaDownloadBtn">
+                        <i class="fas fa-download"></i> Download Now
+                    </button>
+                    <button class="btn btn-outline" style="background: rgba(255,255,255,0.1); color: white; border-color: rgba(255,255,255,0.3);">
+                        <i class="fas fa-play-circle"></i> Watch Demo
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-column">
+                    <h3>Audio Transcriber Pro</h3>
+                    <p style="color: #94a3b8; margin-bottom: 20px;">Transform your audio and video into accurate, editable text with AI-powered transcription.</p>
+                    <div class="social-links">
+                        <a href="#"><i class="fab fa-twitter"></i></a>
+                        <a href="#"><i class="fab fa-facebook-f"></i></a>
+                        <a href="#"><i class="fab fa-instagram"></i></a>
+                        <a href="#"><i class="fab fa-linkedin-in"></i></a>
+                    </div>
+                </div>
+                <div class="footer-column">
+                    <h3>Product</h3>
+                    <ul class="footer-links">
+                        <li><a href="#features">Features</a></li>
+                        <li><a href="#pricing">Pricing</a></li>
+                        <li><a href="#how-it-works">Use Cases</a></li>
+                        <li><a href="#">Updates</a></li>
+                    </ul>
+                </div>
+                <div class="footer-column">
+                    <h3>Resources</h3>
+                    <ul class="footer-links">
+                        <li><a href="#">Documentation</a></li>
+                        <li><a href="#">Tutorials</a></li>
+                        <li><a href="#">Blog</a></li>
+                        <li><a href="#">Support</a></li>
+                    </ul>
+                </div>
+                <div class="footer-column">
+                    <h3>Company</h3>
+                    <ul class="footer-links">
+                        <li><a href="#">About Us</a></li>
+                        <li><a href="#">Careers</a></li>
+                        <li><a href="#">Contact</a></li>
+                        <li><a href="#">Privacy Policy</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2023 Audio Transcriber Pro. All rights reserved.</p>
+                <p>Made with <i class="fas fa-heart" style="color: #ef4444;"></i> for content creators</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Paywall Modal -->
+    <div class="modal-overlay" id="paywallModal">
+        <div class="modal">
+            <button class="close-modal" id="closeModal">
+                <i class="fas fa-times"></i>
+            </button>
+            <div class="modal-icon">
+                <i class="fas fa-lock"></i>
+            </div>
+            <h2>Unlock Audio Transcriber Pro</h2>
+            <p>Choose a plan to download the app and start transcribing your audio and video files with AI precision.</p>
+            <div class="modal-buttons">
+                <button class="btn btn-primary" id="modalProBtn">
+                    <i class="fas fa-crown"></i> Get Pro - $19/month
+                </button>
+                <button class="btn btn-outline" id="modalBasicBtn">
+                    Get Basic - $9/month
+                </button>
+            </div>
+            <p style="margin-top: 20px; font-size: 14px;">14-day free trial included. Cancel anytime.</p>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
