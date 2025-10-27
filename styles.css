@@ -1132,6 +1132,44 @@ footer {
         display: none;
     }
 
+.hidden {
+    display: none;
+}
+
+#payment-message {
+    color: #dc2626;
+    font-size: 16px;
+    line-height: 20px;
+    padding-top: 12px;
+    text-align: center;
+    background: #fef2f2;
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid #fecaca;
+}
+
+.free-testing-option {
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.02); }
+}
+
+.btn-light {
+    background: white !important;
+    color: #667eea !important;
+    border: 2px solid white !important;
+    font-weight: 600;
+}
+
+.btn-light:hover {
+    background: #f8f9fa !important;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+}
+
     .payment-card,
     .success-card,
     .download-card {

@@ -1,109 +1,238 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Payment - Audio Transcriber Pro</title>
-    <link rel="stylesheet" href="styles.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Payment - Audio Transcriber Pro</title>
+
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Stripe.js -->
+  <script src="https://js.stripe.com/v3/"></script>
+
+  <style>
+    :root { --bg:#f8fafc; --card:#fff; --muted:#64748b; --primary:#6366f1; --danger:#ef4444; --success:#16a34a; --radius:10px; }
+    html,body{height:100%;margin:0;font-family:Inter,sans-serif;color:#0f172a;background:var(--bg);}
+    .container{max-width:1100px;margin:0 auto;padding:20px;}
+    .navbar{display:flex;justify-content:space-between;align-items:center;gap:12px;}
+    .logo{display:flex;gap:8px;align-items:center;text-decoration:none;color:#111827;font-weight:600;}
+    .btn{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;cursor:pointer;text-decoration:none;}
+    .btn-outline{border:1px solid #cbd5e1;background:transparent;color:#0f172a;}
+    .payment-container{display:flex;justify-content:center;padding:36px 20px;}
+    .card{width:100%;max-width:820px;background:var(--card);padding:26px;border-radius:var(--radius);box-shadow:0 10px 30px rgba(2,6,23,0.06);}
+    .payment-plan{display:flex;justify-content:space-between;align-items:center;margin:18px 0;padding:12px;background:#f1f5f9;border-radius:8px;}
+    label{display:block;margin-bottom:8px;font-size:14px;color:#0f172a;}
+    input[type="email"], input[type="text"], select{width:100%;padding:10px 12px;border-radius:8px;border:1px solid #e6edf3;font-size:14px;}
+    .form-row{display:flex;gap:12px;}
+    .form-row .form-group{flex:1;}
+    .small{font-size:13px;color:var(--muted);}
+    .btn-primary{background:var(--primary);color:#fff;border:0;padding:10px 14px;border-radius:8px;cursor:pointer;}
+    #spinner{display:none;}
+    #devBox{position:fixed;bottom:14px;left:14px;background:#ffffffcc;border:1px solid #e6edf3;padding:8px;border-radius:8px;z-index:9999;display:flex;gap:8px;align-items:center;box-shadow:0 6px 18px rgba(2,6,23,0.06);}
+    #devBox input{padding:6px 8px;font-size:13px;border-radius:6px;border:1px solid #e6edf3;}
+    #devBox button{padding:6px 8px;font-size:13px;border-radius:6px;}
+    @media(max-width:640px){.form-row{flex-direction:column;}#devBox{left:8px;right:8px;bottom:8px;}}
+  </style>
 </head>
 <body>
-    <!-- Header -->
-    <header>
-        <div class="container">
-            <nav class="navbar">
-                <a href="index.html" class="logo">
-                    <i class="fas fa-headphones logo-icon"></i>
-                    AudioTranscriber Pro
-                </a>
-                <div class="nav-buttons">
-                    <a href="index.html" class="btn btn-outline">
-                        <i class="fas fa-arrow-left"></i> Back to Home
-                    </a>
-                </div>
-            </nav>
+  <header>
+    <div class="container">
+      <nav class="navbar" role="navigation">
+        <a class="logo" href="index.html"><i class="fas fa-headphones"></i><span>AudioTranscriber Pro</span></a>
+        <div class="nav-buttons"><a href="index.html" class="btn btn-outline"><i class="fas fa-arrow-left"></i> Back to Home</a></div>
+      </nav>
+    </div>
+  </header>
+
+  <main class="payment-container">
+    <div class="card" role="main" aria-labelledby="checkout-heading">
+      <h2 id="checkout-heading">Complete Your Purchase</h2>
+      <p class="small">Secure checkout — payments handled by Stripe</p>
+
+      <div class="payment-plan" aria-hidden="true">
+        <div><div id="selectedPlanName" style="font-weight:700">Pro Plan</div>
+        <div class="small">14-day free trial, then subscription billed monthly</div></div>
+        <div style="font-weight:700">$<span id="selectedPlanPrice">19</span>/mo</div>
+      </div>
+
+      <form id="payment-form" novalidate>
+        <div class="form-group">
+          <label for="email">Email address</label>
+          <input id="email" type="email" name="email" required placeholder="you@example.com" autocomplete="email" />
+          <div class="small" style="margin-top:6px">We will send your receipt and download link to this email.</div>
         </div>
-    </header>
 
-    <!-- Payment Section -->
-    <section class="payment-container">
-        <div class="payment-card">
-            <div class="payment-header">
-                <h1>Complete Your Purchase</h1>
-                <p>You're one step away from unlocking Audio Transcriber Pro</p>
-            </div>
-
-            <div class="payment-plan">
-                <div class="plan-info">
-                    <h3 id="planName">Pro Plan</h3>
-                    <p>14-day free trial, then $<span id="planPrice">19</span>/month</p>
-                </div>
-                <div class="plan-price">$<span id="displayPrice">19</span></div>
-            </div>
-
-            <form id="paymentForm" class="payment-form">
-                <div class="form-group">
-                    <label for="email">Email Address</label>
-                    <input type="email" id="email" name="email" required placeholder="your@email.com">
-                </div>
-
-                <div class="form-group">
-                    <label for="cardNumber">Card Number</label>
-                    <input type="text" id="cardNumber" name="cardNumber" required placeholder="1234 5678 9012 3456" maxlength="19">
-                </div>
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="expiryDate">Expiry Date</label>
-                        <input type="text" id="expiryDate" name="expiryDate" required placeholder="MM/YY" maxlength="5">
-                    </div>
-                    <div class="form-group">
-                        <label for="cvc">CVC</label>
-                        <input type="text" id="cvc" name="cvc" required placeholder="123" maxlength="3">
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label for="name">Name on Card</label>
-                    <input type="text" id="name" name="name" required placeholder="John Doe">
-                </div>
-
-                <div class="form-group">
-                    <label for="country">Country</label>
-                    <select id="country" name="country" required>
-                        <option value="">Select Country</option>
-                        <option value="US">United States</option>
-                        <option value="CA">Canada</option>
-                        <option value="UK">United Kingdom</option>
-                        <option value="AU">Australia</option>
-                        <option value="DE">Germany</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label for="zipCode">ZIP / Postal Code</label>
-                    <input type="text" id="zipCode" name="zipCode" required placeholder="12345">
-                </div>
-
-                <div class="form-group">
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <input type="checkbox" id="terms" name="terms" required>
-                        <label for="terms" style="margin: 0;">I agree to the <a href="#" style="color: var(--primary);">Terms of Service</a> and <a href="#" style="color: var(--primary);">Privacy Policy</a></label>
-                    </div>
-                </div>
-
-                <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center;">
-                    <i class="fas fa-lock"></i> Complete Purchase - $<span id="submitPrice">19</span>/month
-                </button>
-
-                <p style="text-align: center; color: var(--gray); font-size: 14px; margin-top: 16px;">
-                    <i class="fas fa-shield-alt"></i> Your payment is secure and encrypted
-                </p>
-            </form>
+        <div class="form-group" style="margin-top:14px;">
+          <label>Payment details</label>
+          <div id="card-element" style="padding:12px;border-radius:8px;border:1px solid #e6edf3;background:#fff;"></div>
+          <div id="card-errors" role="alert" class="small" style="margin-top:8px;color:var(--danger)"></div>
         </div>
-    </section>
 
-    <script src="payment.js"></script>
+        <div class="form-row" style="margin-top:14px;">
+          <div class="form-group">
+            <label for="name">Full name</label>
+            <input id="name" type="text" placeholder="Full name" />
+          </div>
+          <div class="form-group">
+            <label for="country">Country</label>
+            <select id="country" name="country">
+              <option value="">Country (optional)</option>
+              <option value="US">United States</option>
+              <option value="CA">Canada</option>
+              <option value="GB">United Kingdom</option>
+              <option value="AU">Australia</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="margin-top:14px;">
+          <label style="display:flex;gap:8px;align-items:flex-start;cursor:pointer;">
+            <input id="terms" type="checkbox" required style="margin-top:6px" />
+            <span class="small">I agree to the <a href="#" target="_blank">Terms of Service</a> and <a href="#" target="_blank">Privacy Policy</a>.</span>
+          </label>
+        </div>
+
+        <div style="margin-top:18px;display:flex;gap:12px;align-items:center;">
+          <button id="submit-button" class="btn-primary" type="submit">
+            <i class="fas fa-lock"></i>
+            <span id="submit-label">Start 14-Day Free Trial</span>
+          </button>
+          <div id="spinner"><i class="fas fa-spinner fa-spin"></i></div>
+        </div>
+
+        <div id="payment-message" aria-live="polite" class="small" style="margin-top:12px;"></div>
+      </form>
+    </div>
+  </main>
+
+  <!-- Developer bypass box -->
+  <div id="devBox" title="Developer bypass">
+    <input id="devEmail" type="email" placeholder="email" style="width:140px" />
+    <input id="devCode" type="text" placeholder="dev code" style="width:110px" />
+    <button id="devBtn" class="btn btn-outline">Bypass</button>
+    <div id="devMsg" class="small" style="margin-left:8px;min-width:120px;"></div>
+  </div>
+
+  <script>
+  (async function(){
+    const DEFAULT_PLAN = sessionStorage.getItem('selectedPlan') || 'pro';
+    const DEFAULT_PRICE = sessionStorage.getItem('selectedPrice') || '19';
+    const selectedPlanName = document.getElementById('selectedPlanName');
+    const selectedPlanPrice = document.getElementById('selectedPlanPrice');
+    const submitButton = document.getElementById('submit-button');
+    const spinner = document.getElementById('spinner');
+    const submitLabel = document.getElementById('submit-label');
+    const paymentMessage = document.getElementById('payment-message');
+    const cardErrors = document.getElementById('card-errors');
+    selectedPlanName.textContent = DEFAULT_PLAN.charAt(0).toUpperCase() + DEFAULT_PLAN.slice(1) + ' Plan';
+    selectedPlanPrice.textContent = DEFAULT_PRICE;
+
+    let stripe=null, elements=null, cardElement=null, clientSecret=null;
+    let DEV_BYPASS_CODE='';
+
+    function showMessage(msg,type='info'){
+      if(!paymentMessage) return;
+      paymentMessage.textContent=msg;
+      paymentMessage.style.color=type==='error'? 'var(--danger)' : type==='success'? 'var(--success)' : '#334155';
+    }
+    function setLoading(isLoading){
+      submitButton.disabled=isLoading;
+      spinner.style.display=isLoading? 'inline-block':'none';
+    }
+
+    // fetch Stripe key and dev bypass code from server
+    try{
+      const cfgResp = await fetch('/api/config',{cache:'no-store'});
+      if(!cfgResp.ok) throw new Error(`Failed to fetch config ${cfgResp.status}`);
+      const cfg = await cfgResp.json();
+      if(!cfg.publishableKey) throw new Error('Stripe key missing');
+      stripe = Stripe(cfg.publishableKey);
+      DEV_BYPASS_CODE = cfg.devBypassCode || '';
+      elements = stripe.elements({appearance:{theme:'stripe'}});
+      cardElement = elements.create('card',{style:{base:{fontSize:'16px',color:'#0f172a','::placeholder':{color:'#94a3b8'}}},hidePostalCode:true});
+      cardElement.mount('#card-element');
+      cardElement.on('change',ev=>{cardErrors.textContent=ev.error? ev.error.message:''});
+    }catch(err){console.error(err); showMessage('Payment system unavailable', 'error'); setLoading(false);}
+
+    // createPaymentIntent that shows server error
+    async function createPaymentIntent(email,plan){
+      const resp = await fetch('/api/create-payment-intent',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({email,plan})
+      });
+      const contentType = resp.headers.get('content-type')||'';
+      let body;
+      if(contentType.includes('application/json')){
+        body = await resp.json();
+      }else{
+        body = {error: await resp.text()};
+      }
+      if(!resp.ok) throw new Error(body.error || `Server responded ${resp.status}`);
+      return body;
+    }
+
+    async function confirmPayment(clientSecret,billingDetails){
+      const result = await stripe.confirmCardPayment(clientSecret,{payment_method:{card:cardElement,billing_details:billingDetails}});
+      if(result.error) throw result.error;
+      return result.paymentIntent;
+    }
+
+    async function verifyPaymentOnServer(paymentIntentId,email,plan){
+      const resp = await fetch('/api/payment-success',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({paymentIntentId,email,plan})});
+      if(!resp.ok){
+        const body = await resp.json().catch(()=>({error:'Server verification failed'}));
+        throw new Error(body.error||`Server returned ${resp.status}`);
+      }
+      return resp.json();
+    }
+
+    document.getElementById('payment-form').addEventListener('submit',async(e)=>{
+      e.preventDefault();
+      paymentMessage.textContent=''; cardErrors.textContent='';
+      const email=document.getElementById('email').value?.trim();
+      const name=document.getElementById('name').value?.trim();
+      const terms=document.getElementById('terms').checked;
+      if(!email){showMessage('Please enter your email','error'); return;}
+      if(!terms){showMessage('Please accept the terms','error'); return;}
+      if(!stripe || !cardElement){showMessage('Payment system not ready','error'); return;}
+      setLoading(true);
+      try{
+        const {clientSecret: cs}=await createPaymentIntent(email,DEFAULT_PLAN);
+        clientSecret=cs;
+        const paymentIntent = await confirmPayment(clientSecret,{name:name||undefined,email});
+        if(paymentIntent && paymentIntent.status==='succeeded'){
+          await verifyPaymentOnServer(paymentIntent.id,email,DEFAULT_PLAN);
+          sessionStorage.setItem('paymentSuccess','true');
+          sessionStorage.setItem('userEmail',email);
+          sessionStorage.setItem('paymentMethod','stripe');
+          sessionStorage.setItem('paidPlan',DEFAULT_PLAN);
+          showMessage('Payment successful! Redirecting...','success');
+          setTimeout(()=>window.location.href='/download.html',800);
+        }else{throw new Error('Payment did not complete');}
+      }catch(err){console.error(err); showMessage(err.message || 'Payment failed','error');}
+      finally{setLoading(false);}
+    });
+
+    // Developer bypass
+    document.getElementById('devBtn').addEventListener('click',async()=>{
+      const code=document.getElementById('devCode').value?.trim();
+      const email=document.getElementById('devEmail').value?.trim()||'dev@test.com';
+      const devMsg=document.getElementById('devMsg');
+      devMsg.textContent='';
+      if(!code){devMsg.style.color='var(--danger)'; devMsg.textContent='Enter code'; return;}
+      if(code!==DEV_BYPASS_CODE){devMsg.style.color='var(--danger)'; devMsg.textContent='Invalid code'; return;}
+      sessionStorage.setItem('paymentSuccess','true');
+      sessionStorage.setItem('userEmail',email);
+      sessionStorage.setItem('paymentMethod','developer');
+      devMsg.style.color='var(--success)';
+      devMsg.textContent='Access granted — redirecting..';
+      setTimeout(()=>window.location.href='/download.html',700);
+    });
+
+  })();
+  </script>
 </body>
 </html>

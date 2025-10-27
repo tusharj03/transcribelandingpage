@@ -1,268 +1,234 @@
-// Payment page JavaScript
-document.addEventListener('DOMContentLoaded', function() {
-    // Get selected plan from sessionStorage
-    const selectedPlan = sessionStorage.getItem('selectedPlan') || 'pro';
-    const selectedPrice = sessionStorage.getItem('selectedPrice') || '19';
+document.addEventListener('DOMContentLoaded', async function() {
+    // Check if plan is selected
+    const selectedPlan = sessionStorage.getItem('selectedPlan');
+    const selectedPrice = sessionStorage.getItem('selectedPrice');
     
-    // Update page with selected plan
-    document.getElementById('planName').textContent = `${selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1)} Plan`;
-    document.getElementById('planPrice').textContent = selectedPrice;
-    document.getElementById('displayPrice').textContent = selectedPrice;
-    document.getElementById('submitPrice').textContent = selectedPrice;
-
-    // Add free testing option to the page
-    addFreeTestingOption();
-
-    // Card number formatting
-    document.getElementById('cardNumber').addEventListener('input', function(e) {
-        let value = e.target.value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
-        let formattedValue = value.match(/.{1,4}/g)?.join(' ');
-        if (formattedValue) {
-            e.target.value = formattedValue;
-        }
-    });
-
-    // Expiry date formatting
-    document.getElementById('expiryDate').addEventListener('input', function(e) {
-        let value = e.target.value.replace(/\//g, '').replace(/[^0-9]/gi, '');
-        if (value.length >= 2) {
-            value = value.substring(0, 2) + '/' + value.substring(2, 4);
-        }
-        e.target.value = value;
-    });
-
-    // CVC input restriction
-    document.getElementById('cvc').addEventListener('input', function(e) {
-        e.target.value = e.target.value.replace(/[^0-9]/gi, '');
-    });
-
-    // ZIP code input restriction
-    document.getElementById('zipCode').addEventListener('input', function(e) {
-        e.target.value = e.target.value.replace(/[^0-9a-zA-Z]/gi, '');
-    });
-
-    // Form submission
-    document.getElementById('paymentForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        // Basic validation
-        const email = document.getElementById('email').value;
-        const cardNumber = document.getElementById('cardNumber').value;
-        const expiryDate = document.getElementById('expiryDate').value;
-        const cvc = document.getElementById('cvc').value;
-        const name = document.getElementById('name').value;
-        const country = document.getElementById('country').value;
-        const zipCode = document.getElementById('zipCode').value;
-        const terms = document.getElementById('terms').checked;
-
-        if (!email || !cardNumber || !expiryDate || !cvc || !name || !country || !zipCode || !terms) {
-            alert('Please fill in all required fields and agree to the terms.');
-            return;
-        }
-
-        // Validate card number (basic check)
-        const cleanCardNumber = cardNumber.replace(/\s/g, '');
-        if (cleanCardNumber.length < 13 || cleanCardNumber.length > 19) {
-            alert('Please enter a valid card number.');
-            return;
-        }
-
-        // Validate expiry date
-        if (!/^\d{2}\/\d{2}$/.test(expiryDate)) {
-            alert('Please enter a valid expiry date (MM/YY).');
-            return;
-        }
-
-        // Validate CVC
-        if (cvc.length < 3 || cvc.length > 4) {
-            alert('Please enter a valid CVC code.');
-            return;
-        }
-
-        // Simulate payment processing
-        processPayment(email, selectedPlan, selectedPrice);
-    });
-
-    // If no plan selected, redirect to home
-    if (!sessionStorage.getItem('selectedPlan')) {
+    if (!selectedPlan || !selectedPrice) {
+        alert('Please select a plan first');
         window.location.href = 'index.html';
+        return;
+    }
+
+    // Update UI with selected plan
+    document.getElementById('selectedPlanName').textContent = 
+        selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1) + ' Plan';
+    document.getElementById('selectedPlanPrice').textContent = selectedPrice;
+    document.getElementById('termsPrice').textContent = selectedPrice;
+    document.getElementById('button-price').textContent = selectedPrice;
+
+    // Initialize Stripe
+    let stripe;
+    let elements;
+    
+    try {
+        // Get Stripe publishable key from server
+        const response = await fetch('/api/config');
+        const { publishableKey } = await response.json();
+        
+        if (!publishableKey) {
+            throw new Error('Stripe publishable key not configured');
+        }
+        
+        stripe = Stripe(publishableKey);
+        
+        // Initialize Stripe Elements
+        const appearance = {
+            theme: 'stripe',
+            variables: {
+                colorPrimary: '#6366f1',
+                colorBackground: '#ffffff',
+                colorText: '#1e293b',
+                colorDanger: '#ef4444',
+                fontFamily: 'Inter, system-ui, sans-serif',
+                spacingUnit: '4px',
+                borderRadius: '12px'
+            }
+        };
+        
+        elements = stripe.elements({ appearance });
+        
+        // Create card element
+        const cardElement = elements.create('card', {
+            style: {
+                base: {
+                    fontSize: '16px',
+                    color: '#1e293b',
+                    '::placeholder': {
+                        color: '#94a3b8'
+                    }
+                }
+            }
+        });
+        
+        cardElement.mount('#card-element');
+        
+        // Handle form submission
+        const form = document.getElementById('payment-form');
+        const submitButton = document.getElementById('submit-button');
+        const buttonText = document.getElementById('button-text');
+        const spinner = document.getElementById('spinner');
+        const paymentMessage = document.getElementById('payment-message');
+        
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            
+            if (!stripe || !elements) {
+                showMessage('Payment system not initialized. Please refresh the page.', 'error');
+                return;
+            }
+            
+            // Disable form submission
+            submitButton.disabled = true;
+            buttonText.textContent = 'Processing...';
+            spinner.classList.remove('hidden');
+            paymentMessage.classList.add('hidden');
+            
+            // Get form data
+            const email = document.getElementById('email').value;
+            const name = document.getElementById('name').value;
+            
+            try {
+                // Create payment intent on server
+                const { clientSecret, paymentIntentId } = await createPaymentIntent(
+                    selectedPrice, 
+                    selectedPlan, 
+                    email
+                );
+                
+                // Confirm payment with Stripe
+                const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
+                    payment_method: {
+                        card: cardElement,
+                        billing_details: {
+                            name: name,
+                            email: email,
+                        },
+                    },
+                    return_url: `${window.location.origin}/download.html`,
+                });
+                
+                if (error) {
+                    showMessage(error.message, 'error');
+                    submitButton.disabled = false;
+                    buttonText.textContent = `Start 14-Day Free Trial - $${selectedPrice}/month after`;
+                    spinner.classList.add('hidden');
+                } else if (paymentIntent.status === 'succeeded') {
+                    // Payment successful
+                    await handleSuccessfulPayment(paymentIntent.id, email, selectedPlan);
+                }
+            } catch (error) {
+                console.error('Payment error:', error);
+                showMessage('An error occurred while processing your payment. Please try again.', 'error');
+                submitButton.disabled = false;
+                buttonText.textContent = `Start 14-Day Free Trial - $${selectedPrice}/month after`;
+                spinner.classList.add('hidden');
+            }
+        });
+        
+        // Handle real-time validation errors from the card Element
+        cardElement.on('change', (event) => {
+            const displayError = document.getElementById('card-errors');
+            if (event.error) {
+                displayError.textContent = event.error.message;
+                displayError.style.color = '#ef4444';
+                displayError.style.fontSize = '14px';
+                displayError.style.marginTop = '8px';
+            } else {
+                displayError.textContent = '';
+            }
+        });
+        
+    } catch (error) {
+        console.error('Stripe initialization error:', error);
+        showMessage('Payment system temporarily unavailable. Please try again later.', 'error');
+    }
+    
+    // Create payment intent on server
+    async function createPaymentIntent(amount, plan, email) {
+        const response = await fetch('/api/create-payment-intent', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                amount: amount,
+                plan: plan,
+                email: email
+            }),
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to create payment intent');
+        }
+        
+        return await response.json();
+    }
+    
+    // Handle successful payment
+    async function handleSuccessfulPayment(paymentIntentId, email, plan) {
+        try {
+            // Notify server of successful payment
+            const response = await fetch('/api/payment-success', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    paymentIntentId: paymentIntentId,
+                    email: email,
+                    plan: plan
+                }),
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                // Store payment success in session storage
+                sessionStorage.setItem('paymentSuccess', 'true');
+                sessionStorage.setItem('userEmail', email);
+                sessionStorage.setItem('paymentMethod', 'stripe');
+                sessionStorage.setItem('paymentId', paymentIntentId);
+                
+                // Redirect to download page
+                window.location.href = 'download.html';
+            } else {
+                throw new Error(result.error || 'Payment verification failed');
+            }
+        } catch (error) {
+            console.error('Payment success handling error:', error);
+            showMessage('Payment processed but verification failed. Please contact support.', 'warning');
+        }
+    }
+    
+    // Show message to user
+    function showMessage(message, type = 'error') {
+        const paymentMessage = document.getElementById('payment-message');
+        paymentMessage.textContent = message;
+        paymentMessage.className = '';
+        
+        if (type === 'error') {
+            paymentMessage.style.background = '#fef2f2';
+            paymentMessage.style.color = '#dc2626';
+            paymentMessage.style.border = '1px solid #fecaca';
+        } else if (type === 'success') {
+            paymentMessage.style.background = '#f0fdf4';
+            paymentMessage.style.color = '#16a34a';
+            paymentMessage.style.border = '1px solid #bbf7d0';
+        } else if (type === 'warning') {
+            paymentMessage.style.background = '#fffbeb';
+            paymentMessage.style.color = '#d97706';
+            paymentMessage.style.border = '1px solid #fed7aa';
+        }
+        
+        paymentMessage.classList.remove('hidden');
     }
 });
 
-// Add free testing option to the payment page
-function addFreeTestingOption() {
-    const paymentCard = document.querySelector('.payment-card');
-    
-    const freeOption = document.createElement('div');
-    freeOption.className = 'free-testing-option';
-    freeOption.innerHTML = `
-        <div style="text-align: center; padding: 20px; margin: 20px 0; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: var(--border-radius); color: white;">
-            <h3 style="margin-bottom: 8px; color: white;">🎁 Free Testing Access</h3>
-            <p style="margin-bottom: 16px; opacity: 0.9;">Want to try before you buy? Get free temporary access for testing.</p>
-            <button class="btn btn-light" id="freeAccessBtn" style="color: #667eea; background: white; border: none;">
-                <i class="fas fa-rocket"></i> Get Free Test Access
-            </button>
-        </div>
-    `;
-    
-    // Insert after the payment plan section
-    const planSection = document.querySelector('.payment-plan');
-    planSection.parentNode.insertBefore(freeOption, planSection.nextSibling);
-
-    // Add free access functionality
-    document.getElementById('freeAccessBtn').addEventListener('click', function() {
-        if (confirm('🎉 Get free testing access?\n\nYou\'ll get temporary access to download and test Audio Transcriber Pro. This is perfect for trying out the features before purchasing.\n\nClick OK to continue.')) {
-            grantFreeAccess();
-        }
-    });
-}
-
-// Process payment (simulated)
-function processPayment(email, plan, price) {
-    const submitButton = document.querySelector('#paymentForm button[type="submit"]');
-    const originalText = submitButton.innerHTML;
-    
-    submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing Payment...';
-    submitButton.disabled = true;
-
-    // Store user email for tracking
-    sessionStorage.setItem('userEmail', email);
-
-    // Simulate API call to payment processor
-    setTimeout(() => {
-        // For demo purposes, we'll simulate both success and failure cases
-        const isSuccess = Math.random() > 0.2; // 80% success rate
-        
-        if (isSuccess) {
-            // Payment successful
-            sessionStorage.setItem('paymentSuccess', 'true');
-            sessionStorage.setItem('paymentMethod', 'paid');
-            sessionStorage.setItem('paidPlan', plan);
-            
-            // Track successful payment
-            trackPayment('success', email, plan, price);
-            
-            // Redirect to success page
-            window.location.href = 'success.html';
-        } else {
-            // Payment failed
-            submitButton.innerHTML = originalText;
-            submitButton.disabled = false;
-            
-            // Show error message
-            alert('❌ Payment failed. Please check your card details and try again.\n\nIf the problem persists, try the free testing option or use a different payment method.');
-            
-            // Track failed payment
-            trackPayment('failed', email, plan, price);
-        }
-    }, 3000);
-}
-
-// Grant free access without payment
-function grantFreeAccess() {
-    const email = prompt('📧 Please enter your email address for free test access:', 'test@example.com');
-    
-    if (!email) {
-        return; // User cancelled
+// Utility function to show/hide elements
+function toggleElement(id, show) {
+    const element = document.getElementById(id);
+    if (element) {
+        element.classList.toggle('hidden', !show);
     }
-    
-    if (!validateEmail(email)) {
-        alert('Please enter a valid email address.');
-        return;
-    }
-    
-    // Show processing
-    const freeBtn = document.getElementById('freeAccessBtn');
-    const originalText = freeBtn.innerHTML;
-    freeBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Setting up free access...';
-    freeBtn.disabled = true;
-    
-    // Simulate processing delay
-    setTimeout(() => {
-        // Store free access data
-        sessionStorage.setItem('userEmail', email);
-        sessionStorage.setItem('paymentSuccess', 'true');
-        sessionStorage.setItem('paymentMethod', 'free_trial');
-        sessionStorage.setItem('freeAccessGranted', 'true');
-        sessionStorage.setItem('freeAccessExpiry', new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()); // 7 days from now
-        
-        // Track free access
-        trackFreeAccess(email);
-        
-        // Show success message and redirect
-        alert(`🎉 Free access granted!\n\nYou now have 7 days of free access to Audio Transcriber Pro.\n\nA confirmation has been sent to ${email} (simulated).`);
-        
-        // Redirect to download page
-        window.location.href = 'success.html';
-    }, 2000);
 }
-
-// Email validation
-function validateEmail(email) {
-    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return re.test(email);
-}
-
-// Track payment events (in real app, send to analytics)
-function trackPayment(status, email, plan, price) {
-    const paymentData = {
-        status: status,
-        email: email,
-        plan: plan,
-        price: price,
-        timestamp: new Date().toISOString(),
-        userAgent: navigator.userAgent
-    };
-    
-    console.log('💳 Payment tracked:', paymentData);
-    
-    // Save to localStorage for demo purposes
-    const payments = JSON.parse(localStorage.getItem('paymentEvents') || '[]');
-    payments.push(paymentData);
-    localStorage.setItem('paymentEvents', JSON.stringify(payments));
-}
-
-// Track free access events
-function trackFreeAccess(email) {
-    const freeAccessData = {
-        email: email,
-        timestamp: new Date().toISOString(),
-        expiry: sessionStorage.getItem('freeAccessExpiry'),
-        userAgent: navigator.userAgent
-    };
-    
-    console.log('🎁 Free access tracked:', freeAccessData);
-    
-    // Save to localStorage for demo purposes
-    const freeAccesses = JSON.parse(localStorage.getItem('freeAccessEvents') || '[]');
-    freeAccesses.push(freeAccessData);
-    localStorage.setItem('freeAccessEvents', JSON.stringify(freeAccesses));
-}
-
-// Add some CSS for the free testing option
-const style = document.createElement('style');
-style.textContent = `
-    .free-testing-option {
-        animation: pulse 2s infinite;
-    }
-    
-    @keyframes pulse {
-        0% { transform: scale(1); }
-        50% { transform: scale(1.02); }
-        100% { transform: scale(1); }
-    }
-    
-    .btn-light {
-        background: white !important;
-        color: #667eea !important;
-        border: 2px solid white !important;
-        font-weight: 600;
-    }
-    
-    .btn-light:hover {
-        background: #f8f9fa !important;
-        transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
-    }
-`;
-document.head.appendChild(style);
