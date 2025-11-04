@@ -5,3 +5,17 @@ assets/AudioTranscriberPro-macOS.dmg
 .env
 .env
 .env
+# Node modules
+node_modules/
+
+# Logs
+logs
+*.log
+
+# OS / editor files
+.DS_Store
+.env
+
+# Build output
+dist/
+build/

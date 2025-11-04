@@ -1,17 +1,24 @@
-document.addEventListener('DOMContentLoaded', function() {
-    // Check payment
+document.addEventListener('DOMContentLoaded', async function() {
+    // Check payment and subscription
     const paymentSuccess = sessionStorage.getItem('paymentSuccess');
-    if (!paymentSuccess) {
+    const userEmail = sessionStorage.getItem('userEmail');
+    
+    if (!paymentSuccess || !userEmail) {
         alert('❌ Please complete payment first');
         window.location.href = 'index.html';
         return;
     }
+
+    // Verify subscription status
+    await verifySubscription();
 
     const downloadOptions = document.querySelectorAll('.download-option');
     const downloadInstructions = document.getElementById('downloadInstructions');
     const downloadButton = document.getElementById('downloadButton');
     const downloadLink = document.getElementById('downloadLink');
     const osName = document.getElementById('osName');
+    const subscriptionInfo = document.getElementById('subscriptionInfo');
+    const subscriptionText = document.getElementById('subscriptionText');
 
     const instructionSections = {
         windows: document.getElementById('windowsInstructions'),
@@ -96,62 +103,103 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Download tracking
     downloadLink.addEventListener('click', function(e) {
-    let os = osName.textContent.toLowerCase();
+        let os = osName.textContent.toLowerCase();
 
-    // Normalize names
-    if (os === 'windows') os = 'windows';
-    else if (os === 'macos') os = 'mac';
-    else if (os === 'linux') os = 'linux';
+        // Normalize names
+        if (os === 'windows') os = 'windows';
+        else if (os === 'macos') os = 'mac';
+        else if (os === 'linux') os = 'linux';
 
-    const isAvailable = availableFiles[os];
+        const isAvailable = availableFiles[os];
 
-    if (!isAvailable) {
-        e.preventDefault();
-        alert(`🚧 ${osName.textContent} version is coming soon!`);
-        return;
-    }
+        if (!isAvailable) {
+            e.preventDefault();
+            alert(`🚧 ${osName.textContent} version is coming soon!`);
+            return;
+        }
 
-    console.log(`📥 Download started: ${os} by ${sessionStorage.getItem('userEmail') || 'unknown'}`);
+        console.log(`📥 Download started: ${os} by ${sessionStorage.getItem('userEmail') || 'unknown'}`);
 
-    // Track downloads
-    const downloads = JSON.parse(localStorage.getItem('appDownloads') || '[]');
-    downloads.push({
-        os: os,
-        timestamp: new Date().toISOString(),
-        plan: sessionStorage.getItem('selectedPlan') || 'unknown',
-        email: sessionStorage.getItem('userEmail') || 'unknown',
-        paymentMethod: sessionStorage.getItem('paymentMethod') || 'unknown'
+        // Track downloads
+        const downloads = JSON.parse(localStorage.getItem('appDownloads') || '[]');
+        downloads.push({
+            os: os,
+            timestamp: new Date().toISOString(),
+            plan: sessionStorage.getItem('paidPlan') || 'unknown',
+            email: sessionStorage.getItem('userEmail') || 'unknown',
+            paymentMethod: sessionStorage.getItem('paymentMethod') || 'unknown',
+            subscriptionId: sessionStorage.getItem('subscriptionId') || 'unknown'
+        });
+        localStorage.setItem('appDownloads', JSON.stringify(downloads));
+
+        // Track subscription usage
+        const userEmail = sessionStorage.getItem('userEmail');
+        if (userEmail) {
+            const userDownloads = JSON.parse(localStorage.getItem(`userDownloads_${userEmail}`) || '[]');
+            userDownloads.push({
+                os: os,
+                timestamp: new Date().toISOString(),
+                version: '1.0.0'
+            });
+            localStorage.setItem(`userDownloads_${userEmail}`, JSON.stringify(userDownloads));
+        }
     });
-    localStorage.setItem('appDownloads', JSON.stringify(downloads));
 
-    // Actually download
-    downloadLink.setAttribute('href', downloadUrls[os]);
-    downloadLink.setAttribute('download', `AudioTranscriberPro-${osName.textContent}.dmg`);
-});
+    // Check subscription button
+    document.getElementById('checkSubscription').addEventListener('click', async function() {
+        await verifySubscription();
+    });
 
+    async function verifySubscription() {
+        const userEmail = sessionStorage.getItem('userEmail');
+        const paymentMethod = sessionStorage.getItem('paymentMethod');
+        
+        if (paymentMethod === 'developer') {
+            // Developer bypass - always show as active
+            subscriptionInfo.style.display = 'block';
+            subscriptionText.innerHTML = `
+                Welcome, <strong>${userEmail}</strong>!<br>
+                <span style="color: var(--secondary);">Developer Account - Full Access</span>
+            `;
+            return;
+        }
 
-    // Developer bypass
-    const devBtn = document.getElementById('developerBypass');
-    devBtn.addEventListener('click', () => {
-        const code = prompt('Enter developer code:');
-        if (!code) return;
+        try {
+            const response = await fetch('/api/check-subscription', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ email: userEmail })
+            });
 
-        fetch('/api/developer-bypass', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: sessionStorage.getItem('userEmail') || 'dev@test.com', code })
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (data.success) {
-                sessionStorage.setItem('paymentSuccess', 'true');
-                sessionStorage.setItem('paymentMethod', 'developer');
-                alert('Developer access granted!');
-                window.location.reload();
+            const result = await response.json();
+
+            if (result.subscribed) {
+                subscriptionInfo.style.display = 'block';
+                const planName = result.plan.charAt(0).toUpperCase() + result.plan.slice(1);
+                const status = result.status.charAt(0).toUpperCase() + result.status.slice(1);
+                
+                subscriptionText.innerHTML = `
+                    Welcome, <strong>${userEmail}</strong>!<br>
+                    Your <strong>${planName}</strong> plan is <span style="color: var(--secondary);">${status}</span>.
+                    ${result.currentPeriodEnd ? `<br>Next billing: ${new Date(result.currentPeriodEnd * 1000).toLocaleDateString()}` : ''}
+                `;
+                
+                // Store subscription info
+                sessionStorage.setItem('subscriptionStatus', result.status);
+                sessionStorage.setItem('subscriptionPlan', result.plan);
             } else {
-                alert('Invalid code.');
+                alert('❌ No active subscription found. Please subscribe first.');
+                window.location.href = 'index.html';
             }
-        })
-        .catch(() => alert('Error during developer access.'));
-    });
+
+        } catch (error) {
+            console.error('Subscription check failed:', error);
+            if (paymentMethod !== 'developer') {
+                alert('❌ Could not verify subscription. Please try again.');
+                window.location.href = 'index.html';
+            }
+        }
+    }
 });

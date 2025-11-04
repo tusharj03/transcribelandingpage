@@ -33,6 +33,9 @@
     #devBox{position:fixed;bottom:14px;left:14px;background:#ffffffcc;border:1px solid #e6edf3;padding:8px;border-radius:8px;z-index:9999;display:flex;gap:8px;align-items:center;box-shadow:0 6px 18px rgba(2,6,23,0.06);}
     #devBox input{padding:6px 8px;font-size:13px;border-radius:6px;border:1px solid #e6edf3;}
     #devBox button{padding:6px 8px;font-size:13px;border-radius:6px;}
+    .hidden{display:none !important;}
+    #payment-message{color:#dc2626;font-size:16px;line-height:20px;padding-top:12px;text-align:center;background:#fef2f2;padding:12px;border-radius:8px;border:1px solid #fecaca;}
+    #payment-message.success{background:#f0fdf4;color:#16a34a;border-color:#bbf7d0;}
     @media(max-width:640px){.form-row{flex-direction:column;}#devBox{left:8px;right:8px;bottom:8px;}}
   </style>
 </head>
@@ -52,28 +55,30 @@
       <p class="small">Secure checkout — payments handled by Stripe</p>
 
       <div class="payment-plan" aria-hidden="true">
-        <div><div id="selectedPlanName" style="font-weight:700">Pro Plan</div>
-        <div class="small">14-day free trial, then subscription billed monthly</div></div>
+        <div>
+          <div id="selectedPlanName" style="font-weight:700">Pro Plan</div>
+          <div class="small">14-day free trial, then subscription billed monthly</div>
+        </div>
         <div style="font-weight:700">$<span id="selectedPlanPrice">19</span>/mo</div>
       </div>
 
       <form id="payment-form" novalidate>
         <div class="form-group">
-          <label for="email">Email address</label>
+          <label for="email">Email address *</label>
           <input id="email" type="email" name="email" required placeholder="you@example.com" autocomplete="email" />
           <div class="small" style="margin-top:6px">We will send your receipt and download link to this email.</div>
         </div>
 
         <div class="form-group" style="margin-top:14px;">
-          <label>Payment details</label>
+          <label>Payment details *</label>
           <div id="card-element" style="padding:12px;border-radius:8px;border:1px solid #e6edf3;background:#fff;"></div>
           <div id="card-errors" role="alert" class="small" style="margin-top:8px;color:var(--danger)"></div>
         </div>
 
         <div class="form-row" style="margin-top:14px;">
           <div class="form-group">
-            <label for="name">Full name</label>
-            <input id="name" type="text" placeholder="Full name" />
+            <label for="name">Full name *</label>
+            <input id="name" type="text" placeholder="Full name" required />
           </div>
           <div class="form-group">
             <label for="country">Country</label>
@@ -97,142 +102,289 @@
         <div style="margin-top:18px;display:flex;gap:12px;align-items:center;">
           <button id="submit-button" class="btn-primary" type="submit">
             <i class="fas fa-lock"></i>
-            <span id="submit-label">Start 14-Day Free Trial</span>
+            <span id="button-text">Start 14-Day Free Trial</span>
           </button>
-          <div id="spinner"><i class="fas fa-spinner fa-spin"></i></div>
+          <div id="spinner" class="hidden"><i class="fas fa-spinner fa-spin"></i></div>
         </div>
 
-        <div id="payment-message" aria-live="polite" class="small" style="margin-top:12px;"></div>
+        <div id="payment-message" class="hidden" aria-live="polite"></div>
+        
+        <div class="small" style="margin-top:20px;text-align:center;color:var(--muted);">
+          <i class="fas fa-shield-alt"></i> Your payment information is secure and encrypted
+        </div>
       </form>
     </div>
   </main>
 
   <!-- Developer bypass box -->
   <div id="devBox" title="Developer bypass">
-    <input id="devEmail" type="email" placeholder="email" style="width:140px" />
+    <input id="devEmail" type="email" placeholder="email" style="width:140px" value="dev@test.com" />
     <input id="devCode" type="text" placeholder="dev code" style="width:110px" />
     <button id="devBtn" class="btn btn-outline">Bypass</button>
     <div id="devMsg" class="small" style="margin-left:8px;min-width:120px;"></div>
   </div>
 
   <script>
-  (async function(){
-    const DEFAULT_PLAN = sessionStorage.getItem('selectedPlan') || 'pro';
-    const DEFAULT_PRICE = sessionStorage.getItem('selectedPrice') || '19';
-    const selectedPlanName = document.getElementById('selectedPlanName');
-    const selectedPlanPrice = document.getElementById('selectedPlanPrice');
-    const submitButton = document.getElementById('submit-button');
-    const spinner = document.getElementById('spinner');
-    const submitLabel = document.getElementById('submit-label');
-    const paymentMessage = document.getElementById('payment-message');
-    const cardErrors = document.getElementById('card-errors');
-    selectedPlanName.textContent = DEFAULT_PLAN.charAt(0).toUpperCase() + DEFAULT_PLAN.slice(1) + ' Plan';
-    selectedPlanPrice.textContent = DEFAULT_PRICE;
+    document.addEventListener('DOMContentLoaded', async function() {
+      // Check if plan is selected
+      const selectedPlan = sessionStorage.getItem('selectedPlan');
+      const selectedPrice = sessionStorage.getItem('selectedPrice');
+      
+      if (!selectedPlan || !selectedPrice) {
+        alert('Please select a plan first');
+        window.location.href = 'index.html';
+        return;
+      }
 
-    let stripe=null, elements=null, cardElement=null, clientSecret=null;
-    let DEV_BYPASS_CODE='';
+      // Update UI with selected plan
+      document.getElementById('selectedPlanName').textContent = 
+          selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1) + ' Plan';
+      document.getElementById('selectedPlanPrice').textContent = selectedPrice;
+      document.getElementById('button-text').textContent = `Start 14-Day Free Trial - $${selectedPrice}/month after`;
 
-    function showMessage(msg,type='info'){
-      if(!paymentMessage) return;
-      paymentMessage.textContent=msg;
-      paymentMessage.style.color=type==='error'? 'var(--danger)' : type==='success'? 'var(--success)' : '#334155';
-    }
-    function setLoading(isLoading){
-      submitButton.disabled=isLoading;
-      spinner.style.display=isLoading? 'inline-block':'none';
-    }
+      // Initialize Stripe
+      let stripe;
+      let elements;
+      let cardElement;
+      
+      try {
+        // Get Stripe publishable key from server
+        const response = await fetch('/api/config');
+        const config = await response.json();
+        
+        if (!config.publishableKey) {
+          throw new Error('Stripe publishable key not configured');
+        }
+        
+        stripe = Stripe(config.publishableKey);
+        
+        // Initialize Stripe Elements
+        elements = stripe.elements({
+          appearance: {
+            theme: 'stripe',
+            variables: {
+              colorPrimary: '#6366f1',
+              colorBackground: '#ffffff',
+              colorText: '#1e293b',
+              colorDanger: '#ef4444',
+              fontFamily: 'Inter, system-ui, sans-serif',
+              spacingUnit: '4px',
+              borderRadius: '12px'
+            }
+          }
+        });
+        
+        // Create card element
+        cardElement = elements.create('card', {
+          style: {
+            base: {
+              fontSize: '16px',
+              color: '#1e293b',
+              '::placeholder': {
+                color: '#94a3b8'
+              }
+            }
+          }
+        });
+        
+        cardElement.mount('#card-element');
+        
+      } catch (error) {
+        console.error('Stripe initialization error:', error);
+        showMessage('Payment system temporarily unavailable. Please try again later.', 'error');
+        return;
+      }
 
-    // fetch Stripe key and dev bypass code from server
-    try{
-      const cfgResp = await fetch('/api/config',{cache:'no-store'});
-      if(!cfgResp.ok) throw new Error(`Failed to fetch config ${cfgResp.status}`);
-      const cfg = await cfgResp.json();
-      if(!cfg.publishableKey) throw new Error('Stripe key missing');
-      stripe = Stripe(cfg.publishableKey);
-      DEV_BYPASS_CODE = cfg.devBypassCode || '';
-      elements = stripe.elements({appearance:{theme:'stripe'}});
-      cardElement = elements.create('card',{style:{base:{fontSize:'16px',color:'#0f172a','::placeholder':{color:'#94a3b8'}}},hidePostalCode:true});
-      cardElement.mount('#card-element');
-      cardElement.on('change',ev=>{cardErrors.textContent=ev.error? ev.error.message:''});
-    }catch(err){console.error(err); showMessage('Payment system unavailable', 'error'); setLoading(false);}
+      // Handle form submission
+      const form = document.getElementById('payment-form');
+      const submitButton = document.getElementById('submit-button');
+      const buttonText = document.getElementById('button-text');
+      const spinner = document.getElementById('spinner');
+      
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        
+        if (!stripe || !elements) {
+          showMessage('Payment system not initialized. Please refresh the page.', 'error');
+          return;
+        }
+        
+        // Disable form submission
+        submitButton.disabled = true;
+        buttonText.textContent = 'Setting up subscription...';
+        spinner.classList.remove('hidden');
+        
+        // Get form data
+        const email = document.getElementById('email').value;
+        const name = document.getElementById('name').value;
+        const terms = document.getElementById('terms').checked;
+        
+        if (!email || !name || !terms) {
+          showMessage('Please fill in all required fields and accept the terms.', 'error');
+          submitButton.disabled = false;
+          buttonText.textContent = `Start 14-Day Free Trial - $${selectedPrice}/month after`;
+          spinner.classList.add('hidden');
+          return;
+        }
 
-    // createPaymentIntent that shows server error
-    async function createPaymentIntent(email,plan){
-      const resp = await fetch('/api/create-payment-intent',{
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({email,plan})
+        try {
+          // Create payment method
+          const { paymentMethod, error: paymentMethodError } = await stripe.createPaymentMethod({
+            type: 'card',
+            card: cardElement,
+            billing_details: {
+              name: name,
+              email: email,
+            },
+          });
+
+          if (paymentMethodError) {
+            throw new Error(paymentMethodError.message);
+          }
+
+          // Create subscription on server
+          const subscriptionResponse = await fetch('/api/create-subscription', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              email: email,
+              plan: selectedPlan,
+              paymentMethodId: paymentMethod.id
+            }),
+          });
+
+          const subscriptionResult = await subscriptionResponse.json();
+
+          if (!subscriptionResponse.ok) {
+            throw new Error(subscriptionResult.error || 'Failed to create subscription');
+          }
+
+          // Confirm payment
+          const { error: confirmError } = await stripe.confirmCardPayment(
+            subscriptionResult.clientSecret,
+            {
+              payment_method: paymentMethod.id,
+            }
+          );
+
+          if (confirmError) {
+            throw new Error(confirmError.message);
+          }
+
+          // Subscription created successfully
+          sessionStorage.setItem('paymentSuccess', 'true');
+          sessionStorage.setItem('userEmail', email);
+          sessionStorage.setItem('paymentMethod', 'stripe');
+          sessionStorage.setItem('subscriptionId', subscriptionResult.subscriptionId);
+          sessionStorage.setItem('paidPlan', selectedPlan);
+
+          showMessage('Subscription created successfully! Redirecting...', 'success');
+          
+          // Redirect to download page
+          setTimeout(() => {
+            window.location.href = 'download.html';
+          }, 1500);
+
+        } catch (error) {
+          console.error('Payment error:', error);
+          showMessage(error.message || 'Failed to create subscription. Please try again.', 'error');
+          
+          // Re-enable form
+          submitButton.disabled = false;
+          buttonText.textContent = `Start 14-Day Free Trial - $${selectedPrice}/month after`;
+          spinner.classList.add('hidden');
+        }
       });
-      const contentType = resp.headers.get('content-type')||'';
-      let body;
-      if(contentType.includes('application/json')){
-        body = await resp.json();
-      }else{
-        body = {error: await resp.text()};
-      }
-      if(!resp.ok) throw new Error(body.error || `Server responded ${resp.status}`);
-      return body;
-    }
 
-    async function confirmPayment(clientSecret,billingDetails){
-      const result = await stripe.confirmCardPayment(clientSecret,{payment_method:{card:cardElement,billing_details:billingDetails}});
-      if(result.error) throw result.error;
-      return result.paymentIntent;
-    }
+      // Handle real-time validation errors from the card Element
+      cardElement.on('change', (event) => {
+        const displayError = document.getElementById('card-errors');
+        if (event.error) {
+          displayError.textContent = event.error.message;
+          displayError.style.color = '#ef4444';
+          displayError.style.fontSize = '14px';
+          displayError.style.marginTop = '8px';
+        } else {
+          displayError.textContent = '';
+        }
+      });
 
-    async function verifyPaymentOnServer(paymentIntentId,email,plan){
-      const resp = await fetch('/api/payment-success',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({paymentIntentId,email,plan})});
-      if(!resp.ok){
-        const body = await resp.json().catch(()=>({error:'Server verification failed'}));
-        throw new Error(body.error||`Server returned ${resp.status}`);
-      }
-      return resp.json();
-    }
+      // Developer bypass
+      document.getElementById('devBtn').addEventListener('click', async () => {
+        const code = document.getElementById('devCode').value?.trim();
+        const email = document.getElementById('devEmail').value?.trim() || 'dev@test.com';
+        const devMsg = document.getElementById('devMsg');
+        
+        devMsg.textContent = '';
+        
+        if (!code) {
+          devMsg.style.color = 'var(--danger)';
+          devMsg.textContent = 'Enter code';
+          return;
+        }
 
-    document.getElementById('payment-form').addEventListener('submit',async(e)=>{
-      e.preventDefault();
-      paymentMessage.textContent=''; cardErrors.textContent='';
-      const email=document.getElementById('email').value?.trim();
-      const name=document.getElementById('name').value?.trim();
-      const terms=document.getElementById('terms').checked;
-      if(!email){showMessage('Please enter your email','error'); return;}
-      if(!terms){showMessage('Please accept the terms','error'); return;}
-      if(!stripe || !cardElement){showMessage('Payment system not ready','error'); return;}
-      setLoading(true);
-      try{
-        const {clientSecret: cs}=await createPaymentIntent(email,DEFAULT_PLAN);
-        clientSecret=cs;
-        const paymentIntent = await confirmPayment(clientSecret,{name:name||undefined,email});
-        if(paymentIntent && paymentIntent.status==='succeeded'){
-          await verifyPaymentOnServer(paymentIntent.id,email,DEFAULT_PLAN);
-          sessionStorage.setItem('paymentSuccess','true');
-          sessionStorage.setItem('userEmail',email);
-          sessionStorage.setItem('paymentMethod','stripe');
-          sessionStorage.setItem('paidPlan',DEFAULT_PLAN);
-          showMessage('Payment successful! Redirecting...','success');
-          setTimeout(()=>window.location.href='/download.html',800);
-        }else{throw new Error('Payment did not complete');}
-      }catch(err){console.error(err); showMessage(err.message || 'Payment failed','error');}
-      finally{setLoading(false);}
+        try {
+          const response = await fetch('/api/developer-bypass', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ email, code })
+          });
+
+          const result = await response.json();
+
+          if (result.success) {
+            sessionStorage.setItem('paymentSuccess', 'true');
+            sessionStorage.setItem('userEmail', email);
+            sessionStorage.setItem('paymentMethod', 'developer');
+            sessionStorage.setItem('paidPlan', 'pro');
+            
+            devMsg.style.color = 'var(--success)';
+            devMsg.textContent = 'Access granted — redirecting...';
+            
+            setTimeout(() => {
+              window.location.href = 'download.html';
+            }, 1000);
+          } else {
+            devMsg.style.color = 'var(--danger)';
+            devMsg.textContent = result.error || 'Invalid code';
+          }
+        } catch (error) {
+          devMsg.style.color = 'var(--danger)';
+          devMsg.textContent = 'Error during developer access';
+        }
+      });
     });
 
-    // Developer bypass
-    document.getElementById('devBtn').addEventListener('click',async()=>{
-      const code=document.getElementById('devCode').value?.trim();
-      const email=document.getElementById('devEmail').value?.trim()||'dev@test.com';
-      const devMsg=document.getElementById('devMsg');
-      devMsg.textContent='';
-      if(!code){devMsg.style.color='var(--danger)'; devMsg.textContent='Enter code'; return;}
-      if(code!==DEV_BYPASS_CODE){devMsg.style.color='var(--danger)'; devMsg.textContent='Invalid code'; return;}
-      sessionStorage.setItem('paymentSuccess','true');
-      sessionStorage.setItem('userEmail',email);
-      sessionStorage.setItem('paymentMethod','developer');
-      devMsg.style.color='var(--success)';
-      devMsg.textContent='Access granted — redirecting..';
-      setTimeout(()=>window.location.href='/download.html',700);
-    });
-
-  })();
+    // Show message to user
+    function showMessage(message, type = 'error') {
+      const paymentMessage = document.getElementById('payment-message');
+      paymentMessage.textContent = message;
+      paymentMessage.className = '';
+      
+      if (type === 'error') {
+        paymentMessage.style.background = '#fef2f2';
+        paymentMessage.style.color = '#dc2626';
+        paymentMessage.style.border = '1px solid #fecaca';
+      } else if (type === 'success') {
+        paymentMessage.style.background = '#f0fdf4';
+        paymentMessage.style.color = '#16a34a';
+        paymentMessage.style.border = '1px solid #bbf7d0';
+        paymentMessage.classList.add('success');
+      }
+      
+      paymentMessage.classList.remove('hidden');
+      
+      // Auto-hide success messages
+      if (type === 'success') {
+        setTimeout(() => {
+          paymentMessage.classList.add('hidden');
+        }, 5000);
+      }
+    }
   </script>
 </body>
 </html>

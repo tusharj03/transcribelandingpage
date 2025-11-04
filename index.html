@@ -26,6 +26,16 @@
                 <div class="nav-buttons">
                     <button class="btn btn-outline" id="loginBtn">Log In</button>
                     <button class="btn btn-primary" id="getStartedBtn">Get Started</button>
+                    <div id="userMenu" style="display: none;">
+                        <button class="btn btn-outline" id="userDropdown">
+                            <i class="fas fa-user"></i> <span id="userEmail"></span> <i class="fas fa-chevron-down"></i>
+                        </button>
+                        <div id="dropdownMenu" class="dropdown-content">
+                            <a href="account.html"><i class="fas fa-cog"></i> Account</a>
+                            <a href="download.html"><i class="fas fa-download"></i> Download</a>
+                            <a href="#" id="logoutLink"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                        </div>
+                    </div>
                 </div>
             </nav>
         </div>
@@ -45,6 +55,15 @@
                         <button class="btn btn-outline" id="watchDemoBtn">
                             <i class="fas fa-play-circle"></i> Watch Demo
                         </button>
+                    </div>
+                    <div id="userStatus" style="margin-top: 20px; display: none;">
+                        <div style="background: var(--secondary-light); padding: 12px; border-radius: var(--border-radius); display: flex; align-items: center; gap: 10px;">
+                            <i class="fas fa-check-circle" style="color: var(--secondary);"></i>
+                            <div>
+                                <strong>Welcome back!</strong> You have an active <span id="currentPlan"></span> subscription.
+                                <a href="download.html" style="margin-left: 10px; color: var(--primary); text-decoration: underline;">Download the app</a>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="hero-image">
@@ -82,6 +101,7 @@
                     </div>
                     <h3>Multiple Format Support</h3>
                     <p>Transcribe MP3, WAV, M4A, MP4, MOV, and many other audio and video formats with ease.</p>
+                    <div class="feature-badge basic">Basic+</div>
                 </div>
                 <div class="feature-card">
                     <div class="feature-icon">
@@ -89,6 +109,7 @@
                     </div>
                     <h3>Screen Recording</h3>
                     <p>Record your screen and get instant transcriptions of meetings, presentations, and tutorials.</p>
+                    <div class="feature-badge pro">Pro+</div>
                 </div>
                 <div class="feature-card">
                     <div class="feature-icon">
@@ -96,6 +117,7 @@
                     </div>
                     <h3>AI-Powered Analysis</h3>
                     <p>Get smart summaries, action items, and key insights automatically generated from your transcripts.</p>
+                    <div class="feature-badge pro">Pro+</div>
                 </div>
                 <div class="feature-card">
                     <div class="feature-icon">
@@ -103,6 +125,7 @@
                     </div>
                     <h3>Live Audio Recording</h3>
                     <p>Record live conversations, interviews, or lectures and transcribe them in real-time.</p>
+                    <div class="feature-badge pro">Pro+</div>
                 </div>
                 <div class="feature-card">
                     <div class="feature-icon">
@@ -110,6 +133,7 @@
                     </div>
                     <h3>Chat with Transcripts</h3>
                     <p>Ask questions about your transcripts and get instant answers powered by AI.</p>
+                    <div class="feature-badge enterprise">Enterprise</div>
                 </div>
                 <div class="feature-card">
                     <div class="feature-icon">
@@ -117,6 +141,7 @@
                     </div>
                     <h3>History & Export</h3>
                     <p>Access your transcription history and export in multiple formats including TXT, PDF, and DOCX.</p>
+                    <div class="feature-badge basic">Basic+</div>
                 </div>
             </div>
         </div>
@@ -176,11 +201,11 @@
                             <i class="fas fa-check"></i>
                             <span>Basic export options</span>
                         </div>
-                        <div class="pricing-feature">
+                        <div class="pricing-feature disabled">
                             <i class="fas fa-times"></i>
                             <span>Video file support</span>
                         </div>
-                        <div class="pricing-feature">
+                        <div class="pricing-feature disabled">
                             <i class="fas fa-times"></i>
                             <span>AI analysis features</span>
                         </div>
@@ -246,6 +271,13 @@
                         </div>
                     </div>
                     <button class="btn btn-outline select-plan" data-plan="enterprise" data-price="49">Select Plan</button>
+                </div>
+            </div>
+            <div id="currentSubscription" style="text-align: center; margin-top: 30px; display: none;">
+                <div style="background: var(--primary-light); padding: 16px; border-radius: var(--border-radius); display: inline-block;">
+                    <i class="fas fa-info-circle" style="color: var(--primary);"></i>
+                    You currently have an active <strong id="activePlanName"></strong> subscription. 
+                    <a href="account.html" style="margin-left: 8px; color: var(--primary-dark); text-decoration: underline;">Manage account</a>
                 </div>
             </div>
         </div>
@@ -452,6 +484,40 @@
                 </button>
             </div>
             <p style="margin-top: 20px; font-size: 14px;">14-day free trial included. Cancel anytime.</p>
+        </div>
+    </div>
+
+    <!-- Login Modal -->
+    <div class="modal-overlay" id="loginModal">
+        <div class="modal">
+            <button class="close-modal" id="closeLoginModal">
+                <i class="fas fa-times"></i>
+            </button>
+            <div class="modal-icon">
+                <i class="fas fa-sign-in-alt"></i>
+            </div>
+            <h2>Welcome Back</h2>
+            <p>Sign in to your Audio Transcriber Pro account</p>
+            
+            <div class="form-group" style="margin-bottom: 16px;">
+                <label for="loginEmail">Email</label>
+                <input type="email" id="loginEmail" placeholder="your@email.com" style="width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px;">
+            </div>
+            
+            <div class="form-group" style="margin-bottom: 20px;">
+                <label for="loginPassword">Password</label>
+                <input type="password" id="loginPassword" placeholder="Your password" style="width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px;">
+            </div>
+            
+            <button class="btn btn-primary" id="submitLogin" style="width: 100%; margin-bottom: 16px;">
+                Sign In
+            </button>
+            
+            <div id="loginMessage" style="text-align: center; color: #ef4444; font-size: 14px; margin-bottom: 16px;"></div>
+            
+            <p style="text-align: center; font-size: 14px; color: #64748b;">
+                Don't have an account? You'll create one when you subscribe.
+            </p>
         </div>
     </div>
 

@@ -1,3 +1,6 @@
+let stripe, elements, cardElement;
+let currentUser = null;
+
 document.addEventListener('DOMContentLoaded', async function() {
     // Check if plan is selected
     const selectedPlan = sessionStorage.getItem('selectedPlan');
@@ -13,42 +16,16 @@ document.addEventListener('DOMContentLoaded', async function() {
     document.getElementById('selectedPlanName').textContent = 
         selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1) + ' Plan';
     document.getElementById('selectedPlanPrice').textContent = selectedPrice;
-    document.getElementById('termsPrice').textContent = selectedPrice;
-    document.getElementById('button-price').textContent = selectedPrice;
 
     // Initialize Stripe
-    let stripe;
-    let elements;
-    
     try {
-        // Get Stripe publishable key from server
         const response = await fetch('/api/config');
-        const { publishableKey } = await response.json();
+        const config = await response.json();
         
-        if (!publishableKey) {
-            throw new Error('Stripe publishable key not configured');
-        }
+        stripe = Stripe(config.publishableKey);
+        elements = stripe.elements();
         
-        stripe = Stripe(publishableKey);
-        
-        // Initialize Stripe Elements
-        const appearance = {
-            theme: 'stripe',
-            variables: {
-                colorPrimary: '#6366f1',
-                colorBackground: '#ffffff',
-                colorText: '#1e293b',
-                colorDanger: '#ef4444',
-                fontFamily: 'Inter, system-ui, sans-serif',
-                spacingUnit: '4px',
-                borderRadius: '12px'
-            }
-        };
-        
-        elements = stripe.elements({ appearance });
-        
-        // Create card element
-        const cardElement = elements.create('card', {
+        cardElement = elements.create('card', {
             style: {
                 base: {
                     fontSize: '16px',
@@ -59,176 +36,153 @@ document.addEventListener('DOMContentLoaded', async function() {
                 }
             }
         });
-        
-        cardElement.mount('#card-element');
-        
-        // Handle form submission
-        const form = document.getElementById('payment-form');
-        const submitButton = document.getElementById('submit-button');
-        const buttonText = document.getElementById('button-text');
-        const spinner = document.getElementById('spinner');
-        const paymentMessage = document.getElementById('payment-message');
-        
-        form.addEventListener('submit', async (event) => {
-            event.preventDefault();
-            
-            if (!stripe || !elements) {
-                showMessage('Payment system not initialized. Please refresh the page.', 'error');
-                return;
-            }
-            
-            // Disable form submission
-            submitButton.disabled = true;
-            buttonText.textContent = 'Processing...';
-            spinner.classList.remove('hidden');
-            paymentMessage.classList.add('hidden');
-            
-            // Get form data
-            const email = document.getElementById('email').value;
-            const name = document.getElementById('name').value;
-            
-            try {
-                // Create payment intent on server
-                const { clientSecret, paymentIntentId } = await createPaymentIntent(
-                    selectedPrice, 
-                    selectedPlan, 
-                    email
-                );
-                
-                // Confirm payment with Stripe
-                const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
-                    payment_method: {
-                        card: cardElement,
-                        billing_details: {
-                            name: name,
-                            email: email,
-                        },
-                    },
-                    return_url: `${window.location.origin}/download.html`,
-                });
-                
-                if (error) {
-                    showMessage(error.message, 'error');
-                    submitButton.disabled = false;
-                    buttonText.textContent = `Start 14-Day Free Trial - $${selectedPrice}/month after`;
-                    spinner.classList.add('hidden');
-                } else if (paymentIntent.status === 'succeeded') {
-                    // Payment successful
-                    await handleSuccessfulPayment(paymentIntent.id, email, selectedPlan);
-                }
-            } catch (error) {
-                console.error('Payment error:', error);
-                showMessage('An error occurred while processing your payment. Please try again.', 'error');
-                submitButton.disabled = false;
-                buttonText.textContent = `Start 14-Day Free Trial - $${selectedPrice}/month after`;
-                spinner.classList.add('hidden');
-            }
-        });
-        
-        // Handle real-time validation errors from the card Element
-        cardElement.on('change', (event) => {
-            const displayError = document.getElementById('card-errors');
-            if (event.error) {
-                displayError.textContent = event.error.message;
-                displayError.style.color = '#ef4444';
-                displayError.style.fontSize = '14px';
-                displayError.style.marginTop = '8px';
-            } else {
-                displayError.textContent = '';
-            }
-        });
-        
     } catch (error) {
-        console.error('Stripe initialization error:', error);
-        showMessage('Payment system temporarily unavailable. Please try again later.', 'error');
+        showMessage('Payment system unavailable. Please try again later.', 'error');
     }
+
+    // Auth form handler
+    document.getElementById('auth-button').addEventListener('click', handleAuth);
     
-    // Create payment intent on server
-    async function createPaymentIntent(amount, plan, email) {
-        const response = await fetch('/api/create-payment-intent', {
+    // Payment form handler
+    document.getElementById('payment-form').addEventListener('submit', handlePaymentSubmit);
+});
+
+async function handleAuth() {
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+    const authButton = document.getElementById('auth-button');
+    const authMessage = document.getElementById('auth-message');
+
+    if (!email || !password) {
+        authMessage.textContent = 'Please enter both email and password';
+        authMessage.style.color = '#ef4444';
+        return;
+    }
+
+    authButton.disabled = true;
+    authButton.textContent = 'Checking...';
+
+    try {
+        // Try to register first, will login if user exists
+        const response = await fetch('/api/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            currentUser = data.user;
+            localStorage.setItem('authToken', data.token);
+            localStorage.setItem('user', JSON.stringify(data.user));
+            
+            // Show payment form
+            document.getElementById('auth-section').style.display = 'none';
+            document.getElementById('payment-form').style.display = 'block';
+            
+            // Mount card element
+            if (cardElement) {
+                cardElement.mount('#card-element');
+            }
+        } else {
+            authMessage.textContent = data.error || 'Authentication failed';
+            authMessage.style.color = '#ef4444';
+        }
+    } catch (error) {
+        authMessage.textContent = 'Network error. Please try again.';
+        authMessage.style.color = '#ef4444';
+    } finally {
+        authButton.disabled = false;
+        authButton.textContent = 'Continue to Payment';
+    }
+}
+
+async function handlePaymentSubmit(event) {
+    event.preventDefault();
+    
+    if (!stripe || !cardElement) {
+        showMessage('Payment system not ready', 'error');
+        return;
+    }
+
+    const submitButton = document.getElementById('submit-button');
+    const submitLabel = document.getElementById('submit-label');
+    const spinner = document.getElementById('spinner');
+    const terms = document.getElementById('terms');
+
+    if (!terms.checked) {
+        showMessage('Please accept the terms and conditions', 'error');
+        return;
+    }
+
+    submitButton.disabled = true;
+    submitLabel.textContent = 'Processing...';
+    spinner.style.display = 'inline-block';
+
+    try {
+        const selectedPlan = sessionStorage.getItem('selectedPlan');
+        
+        // Create payment method
+        const { paymentMethod, error } = await stripe.createPaymentMethod({
+            type: 'card',
+            card: cardElement,
+        });
+
+        if (error) {
+            throw new Error(error.message);
+        }
+
+        // Create subscription
+        const response = await fetch('/api/create-subscription', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('authToken')}`
             },
             body: JSON.stringify({
-                amount: amount,
-                plan: plan,
-                email: email
-            }),
+                plan: selectedPlan,
+                payment_method: paymentMethod.id
+            })
         });
-        
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error || 'Failed to create payment intent');
-        }
-        
-        return await response.json();
-    }
-    
-    // Handle successful payment
-    async function handleSuccessfulPayment(paymentIntentId, email, plan) {
-        try {
-            // Notify server of successful payment
-            const response = await fetch('/api/payment-success', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    paymentIntentId: paymentIntentId,
-                    email: email,
-                    plan: plan
-                }),
-            });
-            
-            const result = await response.json();
-            
-            if (result.success) {
-                // Store payment success in session storage
-                sessionStorage.setItem('paymentSuccess', 'true');
-                sessionStorage.setItem('userEmail', email);
-                sessionStorage.setItem('paymentMethod', 'stripe');
-                sessionStorage.setItem('paymentId', paymentIntentId);
-                
-                // Redirect to download page
-                window.location.href = 'download.html';
-            } else {
-                throw new Error(result.error || 'Payment verification failed');
-            }
-        } catch (error) {
-            console.error('Payment success handling error:', error);
-            showMessage('Payment processed but verification failed. Please contact support.', 'warning');
-        }
-    }
-    
-    // Show message to user
-    function showMessage(message, type = 'error') {
-        const paymentMessage = document.getElementById('payment-message');
-        paymentMessage.textContent = message;
-        paymentMessage.className = '';
-        
-        if (type === 'error') {
-            paymentMessage.style.background = '#fef2f2';
-            paymentMessage.style.color = '#dc2626';
-            paymentMessage.style.border = '1px solid #fecaca';
-        } else if (type === 'success') {
-            paymentMessage.style.background = '#f0fdf4';
-            paymentMessage.style.color = '#16a34a';
-            paymentMessage.style.border = '1px solid #bbf7d0';
-        } else if (type === 'warning') {
-            paymentMessage.style.background = '#fffbeb';
-            paymentMessage.style.color = '#d97706';
-            paymentMessage.style.border = '1px solid #fed7aa';
-        }
-        
-        paymentMessage.classList.remove('hidden');
-    }
-});
 
-// Utility function to show/hide elements
-function toggleElement(id, show) {
-    const element = document.getElementById(id);
-    if (element) {
-        element.classList.toggle('hidden', !show);
+        const subscription = await response.json();
+
+        if (subscription.error) {
+            throw new Error(subscription.error);
+        }
+
+        // Confirm payment if needed
+        if (subscription.status === 'incomplete' && subscription.clientSecret) {
+            const { error: confirmError } = await stripe.confirmCardPayment(
+                subscription.clientSecret
+            );
+
+            if (confirmError) {
+                throw new Error(confirmError.message);
+            }
+        }
+
+        // Success
+        sessionStorage.setItem('subscriptionActive', 'true');
+        sessionStorage.setItem('userPlan', selectedPlan);
+        showMessage('Subscription activated! Redirecting...', 'success');
+        
+        setTimeout(() => {
+            window.location.href = 'download.html';
+        }, 2000);
+
+    } catch (error) {
+        showMessage(error.message, 'error');
+    } finally {
+        submitButton.disabled = false;
+        submitLabel.textContent = 'Start 14-Day Free Trial';
+        spinner.style.display = 'none';
     }
+}
+
+function showMessage(message, type = 'error') {
+    const messageEl = document.getElementById('payment-message');
+    messageEl.textContent = message;
+    messageEl.style.color = type === 'error' ? '#ef4444' : '#16a34a';
 }

@@ -18,6 +18,9 @@
                     AudioTranscriber Pro
                 </a>
                 <div class="nav-buttons">
+                    <a href="account.html" class="btn btn-outline">
+                        <i class="fas fa-user"></i> My Account
+                    </a>
                     <a href="index.html" class="btn btn-outline">
                         <i class="fas fa-home"></i> Back to Home
                     </a>
@@ -88,6 +91,24 @@
                 <a href="#" class="btn btn-primary" id="downloadLink" style="justify-content: center;">
                     <i class="fas fa-download"></i> Download for <span id="osName"></span>
                 </a>
+            </div>
+
+            <!-- Subscription Info Section -->
+            <div id="subscriptionInfo" style="display: none; margin-top: 40px; padding: 20px; background: var(--secondary-light); border-radius: var(--border-radius); border-left: 4px solid var(--secondary);">
+                <h3 style="margin-bottom: 12px; color: var(--dark);">
+                    <i class="fas fa-user-check"></i> Subscription Active
+                </h3>
+                <p style="color: var(--gray); margin-bottom: 16px;" id="subscriptionText">
+                    Welcome! Your subscription is active.
+                </p>
+                <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                    <a href="account.html" class="btn btn-outline">
+                        <i class="fas fa-cog"></i> Manage Subscription
+                    </a>
+                    <button id="checkSubscription" class="btn btn-outline">
+                        <i class="fas fa-sync-alt"></i> Refresh Status
+                    </button>
+                </div>
             </div>
 
             <div style="margin-top: 40px; padding: 20px; background: var(--gray-light); border-radius: var(--border-radius);">
