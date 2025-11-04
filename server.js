@@ -10,6 +10,7 @@ const bodyParser = require('body-parser');
 const { MongoClient, ObjectId } = require('mongodb');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const nodemailer = require('nodemailer');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -63,6 +64,17 @@ const PLANS = {
   }
 };
 
+// === Email Configuration ===
+const emailTransporter = nodemailer.createTransport({
+  host: process.env.SMTP_HOST || 'smtp.gmail.com',
+  port: process.env.SMTP_PORT || 587,
+  secure: false,
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS
+  }
+});
+
 // === Middleware ===
 app.use(express.static(path.join(__dirname)));
 app.use(express.json());
@@ -92,6 +104,8 @@ app.get('/payment.html', (req, res) => res.sendFile(path.join(__dirname, 'paymen
 app.get('/download.html', (req, res) => res.sendFile(path.join(__dirname, 'download.html')));
 app.get('/success.html', (req, res) => res.sendFile(path.join(__dirname, 'success.html')));
 app.get('/account.html', (req, res) => res.sendFile(path.join(__dirname, 'account.html')));
+app.get('/verify-email.html', (req, res) => res.sendFile(path.join(__dirname, 'verify-email.html')));
+app.get('/reset-password.html', (req, res) => res.sendFile(path.join(__dirname, 'reset-password.html')));
 
 // Return Stripe publishable key for frontend
 app.get('/api/config', (req, res) => {
@@ -111,7 +125,7 @@ app.get('/api/config', (req, res) => {
   });
 });
 
-// User Registration & Login (for website)
+// User Registration with Email Verification
 app.post('/api/register', async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -120,73 +134,62 @@ app.post('/api/register', async (req, res) => {
       return res.status(400).json({ error: 'Email and password required' });
     }
 
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ error: 'Invalid email format' });
+    }
+
+    // Validate password strength
+    if (password.length < 8) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters long' });
+    }
+
     // Check if user exists
     const existingUser = await usersCollection.findOne({ email });
     
     if (existingUser) {
-      // User exists, verify password
-      const validPassword = await bcrypt.compare(password, existingUser.password);
-      if (!validPassword) {
-        return res.status(401).json({ error: 'Invalid password' });
-      }
-
-      // Update last login
-      await usersCollection.updateOne(
-        { email },
-        { $set: { lastLogin: new Date() } }
-      );
-      
-      // Create session token
-      const token = jwt.sign({ 
-        userId: existingUser._id, 
-        email: existingUser.email 
-      }, JWT_SECRET, { expiresIn: '30d' });
-      
-      res.json({
-        success: true,
-        user: {
-          id: existingUser._id,
-          email: existingUser.email,
-          plan: existingUser.plan,
-          status: existingUser.status
-        },
-        token
-      });
-    } else {
-      // Create new user
-      const hashedPassword = await bcrypt.hash(password, 10);
-      
-      const newUser = {
-        email,
-        password: hashedPassword,
-        status: 'inactive',
-        plan: 'inactive',
-        createdAt: new Date(),
-        lastLogin: new Date()
-      };
-      
-      const result = await usersCollection.insertOne(newUser);
-      
-      const token = jwt.sign({ 
-        userId: result.insertedId, 
-        email 
-      }, JWT_SECRET, { expiresIn: '30d' });
-      
-      res.json({
-        success: true,
-        user: {
-          id: result.insertedId,
-          email,
-          plan: 'inactive',
-          status: 'inactive'
-        },
-        token
-      });
+      return res.status(400).json({ error: 'Email already registered' });
     }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 12);
+    
+    // Create verification token
+    const verificationToken = jwt.sign({ email }, JWT_SECRET, { expiresIn: '24h' });
+    
+    // Create new user
+    const newUser = {
+      email,
+      password: hashedPassword,
+      status: 'unverified',
+      plan: 'inactive',
+      verificationToken,
+      emailVerified: false,
+      createdAt: new Date(),
+      lastLogin: null
+    };
+    
+    const result = await usersCollection.insertOne(newUser);
+    
+    // Send verification email
+    await sendVerificationEmail(email, verificationToken);
+    
+    res.json({
+      success: true,
+      message: 'Registration successful! Please check your email for verification.',
+      user: {
+        id: result.insertedId,
+        email,
+        status: 'unverified',
+        plan: 'inactive',
+        emailVerified: false
+      }
+    });
+
   } catch (error) {
     console.error('Registration error:', error);
     
-    // Handle duplicate email error
     if (error.code === 11000) {
       return res.status(400).json({ error: 'Email already exists' });
     }
@@ -195,8 +198,327 @@ app.post('/api/register', async (req, res) => {
   }
 });
 
-// Simple email-based login (for website)
+// Email verification endpoint
+app.post('/api/verify-email', async (req, res) => {
+  const { token } = req.body;
+  
+  if (!token) {
+    return res.status(400).json({ error: 'Verification token required' });
+  }
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const user = await usersCollection.findOne({ 
+      email: decoded.email, 
+      verificationToken: token 
+    });
+
+    if (!user) {
+      return res.status(400).json({ error: 'Invalid or expired verification token' });
+    }
+
+    // Update user as verified
+    await usersCollection.updateOne(
+      { email: decoded.email },
+      { 
+        $set: { 
+          emailVerified: true,
+          verificationToken: null,
+          status: 'inactive' // Change from unverified to inactive
+        } 
+      }
+    );
+
+    res.json({
+      success: true,
+      message: 'Email verified successfully! You can now log in.'
+    });
+
+  } catch (error) {
+    console.error('Email verification error:', error);
+    res.status(400).json({ error: 'Invalid or expired verification token' });
+  }
+});
+
+// Send verification email
+app.post('/api/send-verification-email', async (req, res) => {
+  const { email } = req.body;
+  
+  if (!email) {
+    return res.status(400).json({ error: 'Email required' });
+  }
+
+  try {
+    const user = await usersCollection.findOne({ email });
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (user.emailVerified) {
+      return res.status(400).json({ error: 'Email already verified' });
+    }
+
+    // Generate new verification token
+    const verificationToken = jwt.sign({ email }, JWT_SECRET, { expiresIn: '24h' });
+    
+    // Update user with new token
+    await usersCollection.updateOne(
+      { email },
+      { $set: { verificationToken } }
+    );
+
+    // Send verification email
+    await sendVerificationEmail(email, verificationToken);
+
+    res.json({
+      success: true,
+      message: 'Verification email sent successfully!'
+    });
+
+  } catch (error) {
+    console.error('Send verification email error:', error);
+    res.status(500).json({ error: 'Failed to send verification email' });
+  }
+});
+
+// Password reset request
+app.post('/api/request-password-reset', async (req, res) => {
+  const { email } = req.body;
+  
+  if (!email) {
+    return res.status(400).json({ error: 'Email required' });
+  }
+
+  try {
+    const user = await usersCollection.findOne({ email });
+    
+    if (!user) {
+      // Don't reveal whether email exists
+      return res.json({ 
+        success: true,
+        message: 'If an account with that email exists, a password reset link has been sent.' 
+      });
+    }
+
+    // Generate reset token
+    const resetToken = jwt.sign({ 
+      userId: user._id, 
+      email: user.email 
+    }, JWT_SECRET, { expiresIn: '1h' });
+    
+    // Store reset token
+    await usersCollection.updateOne(
+      { email },
+      { 
+        $set: { 
+          resetToken,
+          resetTokenExpires: new Date(Date.now() + 3600000) // 1 hour
+        } 
+      }
+    );
+
+    // Send reset email
+    await sendPasswordResetEmail(email, resetToken);
+
+    res.json({
+      success: true,
+      message: 'If an account with that email exists, a password reset link has been sent.'
+    });
+
+  } catch (error) {
+    console.error('Password reset request error:', error);
+    res.status(500).json({ error: 'Failed to process password reset request' });
+  }
+});
+
+// Reset password
+app.post('/api/reset-password', async (req, res) => {
+  const { token, newPassword } = req.body;
+  
+  if (!token || !newPassword) {
+    return res.status(400).json({ error: 'Token and new password required' });
+  }
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const user = await usersCollection.findOne({ 
+      email: decoded.email, 
+      resetToken: token,
+      resetTokenExpires: { $gt: new Date() }
+    });
+
+    if (!user) {
+      return res.status(400).json({ error: 'Invalid or expired reset token' });
+    }
+
+    // Validate new password
+    if (newPassword.length < 8) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters long' });
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
+    
+    // Update password and clear reset token
+    await usersCollection.updateOne(
+      { email: decoded.email },
+      { 
+        $set: { 
+          password: hashedPassword,
+          resetToken: null,
+          resetTokenExpires: null 
+        } 
+      }
+    );
+
+    res.json({
+      success: true,
+      message: 'Password reset successfully! You can now log in with your new password.'
+    });
+
+  } catch (error) {
+    console.error('Password reset error:', error);
+    res.status(400).json({ error: 'Invalid or expired reset token' });
+  }
+});
+
+// Website Login
 app.post('/api/login', async (req, res) => {
+  const { email, password } = req.body;
+  
+  if (!email || !password) {
+    return res.status(400).json({ error: 'Email and password required' });
+  }
+
+  try {
+    const user = await usersCollection.findOne({ email });
+    
+    if (!user) {
+      return res.status(401).json({ error: 'Invalid email or password' });
+    }
+
+    // Check if email is verified
+    if (!user.emailVerified) {
+      return res.status(401).json({ error: 'Please verify your email address before logging in' });
+    }
+
+    // Verify password
+    const validPassword = await bcrypt.compare(password, user.password);
+    if (!validPassword) {
+      return res.status(401).json({ error: 'Invalid email or password' });
+    }
+
+    // Update last login
+    await usersCollection.updateOne(
+      { email },
+      { $set: { lastLogin: new Date() } }
+    );
+    
+    // Create session token
+    const token = jwt.sign({ 
+      userId: user._id, 
+      email: user.email 
+    }, JWT_SECRET, { expiresIn: '30d' });
+    
+    res.json({
+      success: true,
+      user: {
+        id: user._id,
+        email: user.email,
+        plan: user.plan,
+        status: user.status,
+        emailVerified: user.emailVerified
+      },
+      token
+    });
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// DMG App Login with Password
+app.post('/api/dmg-login', async (req, res) => {
+  const { email, password } = req.body;
+  
+  if (!email || !password) {
+    return res.status(400).json({ error: 'Email and password required' });
+  }
+
+  try {
+    const user = await usersCollection.findOne({ email });
+    
+    if (!user) {
+      return res.status(401).json({ 
+        success: false,
+        error: 'Invalid email or password' 
+      });
+    }
+
+    // Check if email is verified
+    if (!user.emailVerified) {
+      return res.status(401).json({
+        success: false,
+        error: 'Please verify your email address before logging in'
+      });
+    }
+
+    // Verify password
+    const validPassword = await bcrypt.compare(password, user.password);
+    if (!validPassword) {
+      return res.status(401).json({ 
+        success: false,
+        error: 'Invalid email or password' 
+      });
+    }
+
+    // Check subscription status
+    const isSubscribed = ['trialing', 'active', 'past_due'].includes(user.status);
+    
+    if (!isSubscribed) {
+      return res.status(401).json({ 
+        success: false,
+        error: 'No active subscription found. Please subscribe first.' 
+      });
+    }
+
+    // Update last login
+    await usersCollection.updateOne(
+      { email },
+      { $set: { lastLogin: new Date() } }
+    );
+    
+    // Create token for DMG app
+    const token = jwt.sign({ 
+      userId: user._id, 
+      email: user.email,
+      plan: user.plan 
+    }, JWT_SECRET, { expiresIn: '30d' });
+
+    res.json({
+      success: true,
+      user: {
+        id: user._id,
+        email: user.email,
+        plan: user.plan,
+        status: user.status,
+        subscribedAt: user.subscribedAt,
+        emailVerified: user.emailVerified
+      },
+      token
+    });
+  } catch (error) {
+    console.error('DMG login error:', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'Database error' 
+    });
+  }
+});
+
+// Simple email-based login (legacy - for backward compatibility)
+app.post('/api/simple-login', async (req, res) => {
   const { email } = req.body;
   
   if (!email) {
@@ -231,7 +553,7 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
-// DMG App Authentication - Password Free
+// DMG App Authentication - Password Free (legacy)
 app.post('/api/dmg-auth', async (req, res) => {
   const { email } = req.body;
   
@@ -340,6 +662,12 @@ app.post('/api/create-subscription', async (req, res) => {
       return res.status(500).json({ error: 'Plan not properly configured' });
     }
 
+    // Check if user exists and is verified
+    const existingUser = await usersCollection.findOne({ email });
+    if (existingUser && !existingUser.emailVerified) {
+      return res.status(400).json({ error: 'Please verify your email address before subscribing' });
+    }
+
     // Create or retrieve customer
     let customer;
     const existingCustomers = await stripe.customers.list({
@@ -382,8 +710,6 @@ app.post('/api/create-subscription', async (req, res) => {
     });
 
     // Create or update user in database
-    const existingUser = await usersCollection.findOne({ email });
-    
     if (!existingUser) {
       // Auto-create user with default password for DMG app
       const defaultPassword = await bcrypt.hash('welcome123', 10);
@@ -394,6 +720,7 @@ app.post('/api/create-subscription', async (req, res) => {
         stripeSubscriptionId: subscription.id,
         plan: plan,
         status: 'trialing',
+        emailVerified: true, // Auto-verify for subscription flow
         subscribedAt: new Date(),
         createdAt: new Date(),
         lastLogin: new Date()
@@ -516,6 +843,7 @@ app.get('/api/user/profile', authenticateToken, async (req, res) => {
         email: user.email,
         plan: user.plan,
         status: user.status,
+        emailVerified: user.emailVerified,
         subscribedAt: user.subscribedAt,
         createdAt: user.createdAt,
         currentPeriodEnd: user.currentPeriodEnd
@@ -638,6 +966,69 @@ async function handleFailedPayment(invoice) {
   }
 }
 
+// Email sending functions
+async function sendVerificationEmail(email, token) {
+  const verificationUrl = `http://localhost:3000/verify-email.html?token=${token}`;
+  
+  try {
+    await emailTransporter.sendMail({
+      from: process.env.SMTP_FROM || 'noreply@audiotranscriberpro.com',
+      to: email,
+      subject: 'Verify Your Audio Transcriber Pro Account',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #6366f1;">Verify Your Email Address</h2>
+          <p>Thank you for creating an account with Audio Transcriber Pro!</p>
+          <p>Please click the button below to verify your email address:</p>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${verificationUrl}" style="background-color: #6366f1; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+              Verify Email Address
+            </a>
+          </div>
+          <p>Or copy and paste this link in your browser:</p>
+          <p style="word-break: break-all; color: #666;">${verificationUrl}</p>
+          <p>This link will expire in 24 hours.</p>
+          <p>If you didn't create an account, please ignore this email.</p>
+        </div>
+      `
+    });
+    console.log(`✅ Verification email sent to: ${email}`);
+  } catch (error) {
+    console.error('Failed to send verification email:', error);
+  }
+}
+
+async function sendPasswordResetEmail(email, token) {
+  const resetUrl = `http://localhost:3000/reset-password.html?token=${token}`;
+  
+  try {
+    await emailTransporter.sendMail({
+      from: process.env.SMTP_FROM || 'noreply@audiotranscriberpro.com',
+      to: email,
+      subject: 'Reset Your Audio Transcriber Pro Password',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #6366f1;">Reset Your Password</h2>
+          <p>We received a request to reset your password for your Audio Transcriber Pro account.</p>
+          <p>Click the button below to reset your password:</p>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${resetUrl}" style="background-color: #6366f1; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+              Reset Password
+            </a>
+          </div>
+          <p>Or copy and paste this link in your browser:</p>
+          <p style="word-break: break-all; color: #666;">${resetUrl}</p>
+          <p>This link will expire in 1 hour.</p>
+          <p>If you didn't request a password reset, please ignore this email.</p>
+        </div>
+      `
+    });
+    console.log(`✅ Password reset email sent to: ${email}`);
+  } catch (error) {
+    console.error('Failed to send password reset email:', error);
+  }
+}
+
 // Developer bypass endpoint
 app.post('/api/developer-bypass', async (req, res) => {
   const { email, code } = req.body;
@@ -653,10 +1044,12 @@ app.post('/api/developer-bypass', async (req, res) => {
           $set: {
             plan: 'pro',
             status: 'active',
+            emailVerified: true,
             subscribedAt: new Date(),
             lastLogin: new Date()
           },
           $setOnInsert: {
+            password: await bcrypt.hash('dev123', 12),
             createdAt: new Date()
           }
         },
@@ -683,6 +1076,7 @@ async function startServer() {
     console.log(`💳 Stripe secret loaded: ${process.env.STRIPE_SECRET_KEY ? '✅' : '❌'}`);
     console.log(`🗄️ MongoDB connected: ✅`);
     console.log(`🔑 JWT secret: ${JWT_SECRET !== 'your-jwt-secret-key-change-in-production' ? '✅' : '❌'}`);
+    console.log(`📧 Email configured: ${process.env.SMTP_USER ? '✅' : '❌'}`);
     console.log(`📊 Database: MongoDB (${process.env.MONGODB_URI})`);
   });
 }
