@@ -2,6 +2,7 @@ require('dotenv').config();
 
 console.log('Stripe secret:', process.env.STRIPE_SECRET_KEY ? '✅ loaded' : '❌ missing');
 console.log('MongoDB URI:', process.env.MONGODB_URI ? '✅ loaded' : '❌ missing');
+console.log('JWT secret:', process.env.JWT_SECRET ? '✅ loaded' : '❌ missing');
 
 const express = require('express');
 const path = require('path');
