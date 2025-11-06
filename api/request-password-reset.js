@@ -82,7 +82,7 @@ module.exports = async (req, res) => {
     );
 
     // Send reset email
-    const resetUrl = `http://localhost:3000/reset-password.html?token=${resetToken}`;
+    const resetUrl = `https://audiotranscriberlanding.vercel.app/reset-password.html?token=${resetToken}`;
     
     try {
       await emailTransporter.sendMail({
