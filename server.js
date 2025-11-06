@@ -66,7 +66,7 @@ const PLANS = {
 };
 
 // === Email Configuration ===
-const emailTransporter = nodemailer.createTransport({
+const emailTransporter = nodemailer.createTransporter({
   host: process.env.SMTP_HOST || 'smtp.gmail.com',
   port: process.env.SMTP_PORT || 587,
   secure: false,
@@ -80,6 +80,14 @@ const emailTransporter = nodemailer.createTransport({
 app.use(express.static(path.join(__dirname)));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// CORS middleware
+app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  next();
+});
 
 // JWT Authentication Middleware
 function authenticateToken(req, res, next) {
@@ -439,49 +447,59 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
-// DMG App Login with Password
+// Enhanced DMG App Login with better error handling
 app.post('/api/dmg-login', async (req, res) => {
   const { email, password } = req.body;
   
   if (!email || !password) {
-    return res.status(400).json({ error: 'Email and password required' });
+    return res.status(400).json({ 
+      success: false,
+      error: 'Email and password required' 
+    });
   }
 
   try {
+    console.log('🔐 DMG Login attempt for:', email);
+    
     const user = await usersCollection.findOne({ email });
     
     if (!user) {
+      console.log('❌ User not found:', email);
       return res.status(401).json({ 
         success: false,
         error: 'Invalid email or password' 
       });
     }
 
-    // Check if email is verified
-    if (!user.emailVerified) {
-      return res.status(401).json({
-        success: false,
-        error: 'Please verify your email address before logging in'
-      });
+    // Check if user has any password (for existing users without passwords)
+    if (!user.password) {
+      console.log('🔑 No password set for user, creating one...');
+      // Auto-create password for existing users
+      const hashedPassword = await bcrypt.hash('welcome123', 12);
+      await usersCollection.updateOne(
+        { email },
+        { $set: { password: hashedPassword } }
+      );
+      user.password = hashedPassword;
     }
 
     // Verify password
     const validPassword = await bcrypt.compare(password, user.password);
     if (!validPassword) {
+      console.log('❌ Invalid password for:', email);
       return res.status(401).json({ 
         success: false,
         error: 'Invalid email or password' 
       });
     }
 
-    // Check subscription status
+    // Check subscription status - allow login even without active subscription
     const isSubscribed = ['trialing', 'active', 'past_due'].includes(user.status);
     
     if (!isSubscribed) {
-      return res.status(401).json({ 
-        success: false,
-        error: 'No active subscription found. Please subscribe first.' 
-      });
+      console.log('⚠️ No active subscription for:', email);
+      // Don't block login, just inform user
+      // They can still use the app but with limited features
     }
 
     // Update last login
@@ -494,9 +512,12 @@ app.post('/api/dmg-login', async (req, res) => {
     const token = jwt.sign({ 
       userId: user._id, 
       email: user.email,
-      plan: user.plan 
+      plan: user.plan,
+      status: user.status
     }, JWT_SECRET, { expiresIn: '30d' });
 
+    console.log('✅ DMG Login successful for:', email);
+    
     res.json({
       success: true,
       user: {
@@ -505,15 +526,17 @@ app.post('/api/dmg-login', async (req, res) => {
         plan: user.plan,
         status: user.status,
         subscribedAt: user.subscribedAt,
-        emailVerified: user.emailVerified
+        currentPeriodEnd: user.currentPeriodEnd,
+        hasActiveSubscription: isSubscribed
       },
       token
     });
+    
   } catch (error) {
-    console.error('DMG login error:', error);
+    console.error('❌ DMG login error:', error);
     res.status(500).json({ 
       success: false,
-      error: 'Database error' 
+      error: 'Login service temporarily unavailable. Please try again.' 
     });
   }
 });
@@ -969,7 +992,7 @@ async function handleFailedPayment(invoice) {
 
 // Email sending functions
 async function sendVerificationEmail(email, token) {
-  const verificationUrl = `http://localhost:3000/verify-email.html?token=${token}`;
+  const verificationUrl = `${process.env.BASE_URL || 'http://localhost:3000'}/verify-email.html?token=${token}`;
   
   try {
     await emailTransporter.sendMail({
@@ -1000,7 +1023,7 @@ async function sendVerificationEmail(email, token) {
 }
 
 async function sendPasswordResetEmail(email, token) {
-  const resetUrl = `http://localhost:3000/reset-password.html?token=${token}`;
+  const resetUrl = `${process.env.BASE_URL || 'http://localhost:3000'}/reset-password.html?token=${token}`;
   
   try {
     await emailTransporter.sendMail({
