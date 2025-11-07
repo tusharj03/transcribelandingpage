@@ -77,36 +77,19 @@ const emailTransporter = nodemailer.createTransport({
 });
 
 // Add this test endpoint to debug email issues
-app.post('/api/debug-email', async (req, res) => {
-  try {
-    console.log('🔧 Testing email configuration...');
-    console.log('SMTP_USER:', process.env.SMTP_USER ? '✅ Set' : '❌ Missing');
-    console.log('SMTP_PASS:', process.env.SMTP_PASS ? '✅ Set' : '❌ Missing');
-    
-    // Test SMTP connection
-    await emailTransporter.verify();
-    console.log('✅ SMTP connection successful');
-    
-    // Try to send a test email
-    await emailTransporter.sendMail({
-      from: process.env.SMTP_USER,
-      to: process.env.SMTP_USER, // send to yourself
-      subject: 'Test Email from Vercel',
-      text: 'If you receive this, email is working!'
-    });
-    
-    res.json({ 
-      success: true, 
-      message: 'Email test successful! Check your inbox.' 
-    });
-  } catch (error) {
-    console.error('❌ Email test failed:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: error.message,
-      details: 'Check SMTP credentials and App Password'
-    });
-  }
+// Add this endpoint to debug email setup
+app.get('/api/debug-email-config', (req, res) => {
+  const config = {
+    SMTP_USER: process.env.SMTP_USER ? '✅ Set' : '❌ Missing',
+    SMTP_PASS: process.env.SMTP_PASS ? '✅ Set' : '❌ Missing', 
+    SMTP_HOST: process.env.SMTP_HOST || 'smtp.gmail.com',
+    SMTP_PORT: process.env.SMTP_PORT || 587,
+    BASE_URL: process.env.BASE_URL || 'Not set',
+    NODE_ENV: process.env.NODE_ENV || 'Not set'
+  };
+  
+  console.log('🔧 Email Configuration:', config);
+  res.json(config);
 });
 
 // === Middleware ===
@@ -326,7 +309,10 @@ app.post('/api/send-verification-email', async (req, res) => {
 });
 
 // Password reset request
+// Fixed password reset endpoint
 app.post('/api/request-password-reset', async (req, res) => {
+  console.log('🔑 Password reset requested for:', req.body?.email);
+  
   const { email } = req.body;
   
   if (!email) {
@@ -338,6 +324,7 @@ app.post('/api/request-password-reset', async (req, res) => {
     
     if (!user) {
       // Don't reveal whether email exists
+      console.log('📧 User not found, but returning success for security');
       return res.json({ 
         success: true,
         message: 'If an account with that email exists, a password reset link has been sent.' 
@@ -361,8 +348,12 @@ app.post('/api/request-password-reset', async (req, res) => {
       }
     );
 
+    console.log('📧 Attempting to send reset email to:', email);
+    
     // Send reset email
     await sendPasswordResetEmail(email, resetToken);
+
+    console.log('✅ Password reset email sent successfully');
 
     res.json({
       success: true,
@@ -370,11 +361,14 @@ app.post('/api/request-password-reset', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Password reset request error:', error);
-    console.error('Password reset request error:', error);
-    if (error.response) console.error('Email response:', error.response.toString());
-    res.status(500).json({ error: error.message || 'Failed to process password reset request' });
-
+    console.error('❌ Password reset request error:', error);
+    console.error('❌ Error stack:', error.stack);
+    
+    // More detailed error response
+    res.status(500).json({ 
+      error: 'Failed to process password reset request',
+      details: process.env.NODE_ENV === 'development' ? error.message : 'Please try again later'
+    });
   }
 });
 
@@ -1062,9 +1056,16 @@ async function sendVerificationEmail(email, token) {
 async function sendPasswordResetEmail(email, token) {
   const resetUrl = `${process.env.BASE_URL || 'https://audiotranscriberlanding.vercel.app'}/reset-password.html?token=${token}`;
   
+  console.log('📧 Preparing to send email to:', email);
+  console.log('🔗 Reset URL:', resetUrl);
+  
   try {
-    await emailTransporter.sendMail({
-      from: process.env.SMTP_FROM || 'noreply@audiotranscriberpro.com',
+    // Test SMTP connection first
+    await emailTransporter.verify();
+    console.log('✅ SMTP connection verified');
+    
+    const mailOptions = {
+      from: process.env.SMTP_FROM || process.env.SMTP_USER,
       to: email,
       subject: 'Reset Your Audio Transcriber Pro Password',
       html: `
@@ -1083,10 +1084,22 @@ async function sendPasswordResetEmail(email, token) {
           <p>If you didn't request a password reset, please ignore this email.</p>
         </div>
       `
-    });
-    console.log(`✅ Password reset email sent to: ${email}`);
+    };
+
+    console.log('📤 Sending email...');
+    const result = await emailTransporter.sendMail(mailOptions);
+    console.log('✅ Email sent successfully:', result.messageId);
+    return true;
+    
   } catch (error) {
-    console.error('Failed to send password reset email:', error);
+    console.error('❌ Email sending failed:', error);
+    console.error('❌ SMTP error details:', {
+      code: error.code,
+      command: error.command,
+      response: error.response,
+      responseCode: error.responseCode
+    });
+    throw error; // Re-throw to be handled by the endpoint
   }
 }
 
