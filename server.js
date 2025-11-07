@@ -1029,7 +1029,7 @@ async function handleFailedPayment(invoice) {
 
 // Email sending functions
 async function sendVerificationEmail(email, token) {
-  const verificationUrl = `${process.env.BASE_URL || 'http://localhost:3000'}/verify-email.html?token=${token}`;
+  const verificationUrl = `${process.env.BASE_URL || 'https://audiotranscriberlanding.vercel.app'}/verify-email.html?token=${token}`;
   
   try {
     await emailTransporter.sendMail({
@@ -1060,7 +1060,7 @@ async function sendVerificationEmail(email, token) {
 }
 
 async function sendPasswordResetEmail(email, token) {
-  const resetUrl = `${process.env.BASE_URL || 'http://localhost:3000'}/reset-password.html?token=${token}`;
+  const resetUrl = `${process.env.BASE_URL || 'https://audiotranscriberlanding.vercel.app'}/reset-password.html?token=${token}`;
   
   try {
     await emailTransporter.sendMail({
