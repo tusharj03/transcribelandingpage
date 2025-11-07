@@ -59,7 +59,7 @@ class EmailService {
         const verificationUrl = `${process.env.BASE_URL || 'audiotranscriberlanding.vercel.app'}/verify-email.html?token=${token}`;
         
         const mailOptions = {
-            from: process.env.SMTP_FROM || 'noreply@audiotranscriberpro.com',
+            from: process.env.SMTP_FROM || 'tusharj2004@gmail.com',
             to: email,
             subject: 'Verify Your Audio Transcriber Pro Account',
             html: this.getVerificationTemplate(verificationUrl)
@@ -72,7 +72,7 @@ class EmailService {
         const resetUrl = `${process.env.BASE_URL || 'audiotranscriberlanding.vercel.app'}/reset-password.html?token=${token}`;
         
         const mailOptions = {
-            from: process.env.SMTP_FROM || 'noreply@audiotranscriberpro.com',
+            from: process.env.SMTP_FROM || 'tusharj2004@gmail.com',
             to: email,
             subject: 'Reset Your Password - Audio Transcriber Pro',
             html: this.getPasswordResetTemplate(resetUrl)

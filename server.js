@@ -67,16 +67,13 @@ const PLANS = {
 
 // === Email Configuration ===
 const emailTransporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || 'smtp.gmail.com',
-  port: process.env.SMTP_PORT || 587,
-  secure: false,
+  service: 'gmail', // Use service name instead of host/port
   auth: {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS
   },
-  tls: {
-    rejectUnauthorized: false
-  }
+  connectionTimeout: 10000, // 10 seconds
+  socketTimeout: 10000
 });
 
 // === Middleware ===
