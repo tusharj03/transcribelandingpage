@@ -41,7 +41,7 @@ class EmailService {
 
         for (const config of configs) {
             try {
-                this.transporter = nodemailer.createTransporter(config);
+                this.transporter = nodemailer.createTransport(config);
                 this.isConfigured = true;
                 console.log('✅ Email service configured successfully');
                 break;
