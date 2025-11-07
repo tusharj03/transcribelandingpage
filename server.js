@@ -76,6 +76,39 @@ const emailTransporter = nodemailer.createTransport({
   socketTimeout: 10000
 });
 
+// Add this test endpoint to debug email issues
+app.post('/api/debug-email', async (req, res) => {
+  try {
+    console.log('🔧 Testing email configuration...');
+    console.log('SMTP_USER:', process.env.SMTP_USER ? '✅ Set' : '❌ Missing');
+    console.log('SMTP_PASS:', process.env.SMTP_PASS ? '✅ Set' : '❌ Missing');
+    
+    // Test SMTP connection
+    await emailTransporter.verify();
+    console.log('✅ SMTP connection successful');
+    
+    // Try to send a test email
+    await emailTransporter.sendMail({
+      from: process.env.SMTP_USER,
+      to: process.env.SMTP_USER, // send to yourself
+      subject: 'Test Email from Vercel',
+      text: 'If you receive this, email is working!'
+    });
+    
+    res.json({ 
+      success: true, 
+      message: 'Email test successful! Check your inbox.' 
+    });
+  } catch (error) {
+    console.error('❌ Email test failed:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message,
+      details: 'Check SMTP credentials and App Password'
+    });
+  }
+});
+
 // === Middleware ===
 app.use(express.static(path.join(__dirname)));
 app.use(express.json());
