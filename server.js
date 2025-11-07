@@ -206,7 +206,8 @@ app.post('/api/register', async (req, res) => {
       return res.status(400).json({ error: 'Email already exists' });
     }
     
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('Email send failed:', err);
+    return res.status(500).json({ error: err.message });
   }
 });
 
