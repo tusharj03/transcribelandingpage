@@ -1,11 +1,21 @@
 const { MongoClient } = require('mongodb');
 const jwt = require('jsonwebtoken');
-const { Resend } = require('resend');
+const nodemailer = require('nodemailer');
 
 const MONGODB_URI = process.env.MONGODB_URI;
 const JWT_SECRET = process.env.JWT_SECRET || 'your-jwt-secret-key-change-in-production';
-const resend = new Resend(process.env.RESEND_API_KEY);
 let cachedDb = null;
+
+// Email transporter (configure with your SMTP settings)
+const emailTransporter = nodemailer.createTransporter({
+  host: process.env.SMTP_HOST || 'smtp.gmail.com',
+  port: process.env.SMTP_PORT || 587,
+  secure: false,
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS
+  }
+});
 
 async function connectToDatabase() {
   if (cachedDb) {
@@ -71,12 +81,12 @@ module.exports = async (req, res) => {
       }
     );
 
-    // Send reset email using Resend
+    // Send reset email
     const resetUrl = `https://audiotranscriberlanding.vercel.app/reset-password.html?token=${resetToken}`;
     
     try {
-      await resend.emails.send({
-        from: 'Audio Transcriber Pro <noreply@audiotranscriberpro.com>',
+      await emailTransporter.sendMail({
+        from: process.env.SMTP_FROM || 'noreply@audiotranscriberpro.com',
         to: email,
         subject: 'Reset Your Password - Audio Transcriber Pro',
         html: `

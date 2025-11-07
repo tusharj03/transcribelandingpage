@@ -3,7 +3,6 @@ require('dotenv').config();
 console.log('Stripe secret:', process.env.STRIPE_SECRET_KEY ? '✅ loaded' : '❌ missing');
 console.log('MongoDB URI:', process.env.MONGODB_URI ? '✅ loaded' : '❌ missing');
 console.log('JWT secret:', process.env.JWT_SECRET ? '✅ loaded' : '❌ missing');
-console.log('Resend API:', process.env.RESEND_API_KEY ? '✅ loaded' : '❌ missing');
 
 const express = require('express');
 const path = require('path');
@@ -12,14 +11,11 @@ const bodyParser = require('body-parser');
 const { MongoClient, ObjectId } = require('mongodb');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { Resend } = require('resend');
+const nodemailer = require('nodemailer');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'your-jwt-secret-key-change-in-production';
-
-// === Resend Email Service ===
-const resend = new Resend(process.env.RESEND_API_KEY);
 
 // === MongoDB Setup ===
 let db;
@@ -68,6 +64,20 @@ const PLANS = {
     stripePriceId: process.env.STRIPE_ENTERPRISE_PRICE_ID
   }
 };
+
+// === Email Configuration ===
+const emailTransporter = nodemailer.createTransport({
+  host: process.env.SMTP_HOST || 'smtp.gmail.com',
+  port: process.env.SMTP_PORT || 587,
+  secure: false,
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS
+  },
+  tls: {
+    rejectUnauthorized: false
+  }
+});
 
 // === Middleware ===
 app.use(express.static(path.join(__dirname)));
@@ -983,13 +993,13 @@ async function handleFailedPayment(invoice) {
   }
 }
 
-// Email sending functions with Resend
+// Email sending functions
 async function sendVerificationEmail(email, token) {
-  const verificationUrl = `${process.env.BASE_URL || 'https://audiotranscriberlanding.vercel.app'}/verify-email.html?token=${token}`;
+  const verificationUrl = `${process.env.BASE_URL || 'http://localhost:3000'}/verify-email.html?token=${token}`;
   
   try {
-    await resend.emails.send({
-      from: 'Audio Transcriber Pro <noreply@audiotranscriberpro.com>',
+    await emailTransporter.sendMail({
+      from: process.env.SMTP_FROM || 'noreply@audiotranscriberpro.com',
       to: email,
       subject: 'Verify Your Audio Transcriber Pro Account',
       html: `
@@ -1011,17 +1021,16 @@ async function sendVerificationEmail(email, token) {
     });
     console.log(`✅ Verification email sent to: ${email}`);
   } catch (error) {
-    console.error('Failed to send verification email:', error);
-    throw error;
+    console.error('❌ Failed to send verification email:', error.response || error);
   }
 }
 
 async function sendPasswordResetEmail(email, token) {
-  const resetUrl = `${process.env.BASE_URL || 'https://audiotranscriberlanding.vercel.app'}/reset-password.html?token=${token}`;
+  const resetUrl = `${process.env.BASE_URL || 'http://localhost:3000'}/reset-password.html?token=${token}`;
   
   try {
-    await resend.emails.send({
-      from: 'Audio Transcriber Pro <noreply@audiotranscriberpro.com>',
+    await emailTransporter.sendMail({
+      from: process.env.SMTP_FROM || 'noreply@audiotranscriberpro.com',
       to: email,
       subject: 'Reset Your Audio Transcriber Pro Password',
       html: `
@@ -1044,7 +1053,6 @@ async function sendPasswordResetEmail(email, token) {
     console.log(`✅ Password reset email sent to: ${email}`);
   } catch (error) {
     console.error('Failed to send password reset email:', error);
-    throw error;
   }
 }
 
@@ -1095,7 +1103,7 @@ async function startServer() {
     console.log(`💳 Stripe secret loaded: ${process.env.STRIPE_SECRET_KEY ? '✅' : '❌'}`);
     console.log(`🗄️ MongoDB connected: ✅`);
     console.log(`🔑 JWT secret: ${JWT_SECRET !== 'your-jwt-secret-key-change-in-production' ? '✅' : '❌'}`);
-    console.log(`📧 Resend configured: ${process.env.RESEND_API_KEY ? '✅' : '❌'}`);
+    console.log(`📧 Email configured: ${process.env.SMTP_USER ? '✅' : '❌'}`);
     console.log(`📊 Database: MongoDB (${process.env.MONGODB_URI})`);
   });
 }
