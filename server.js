@@ -341,7 +341,10 @@ app.post('/api/request-password-reset', async (req, res) => {
 
   } catch (error) {
     console.error('Password reset request error:', error);
-    res.status(500).json({ error: 'Failed to process password reset request' });
+    console.error('Password reset request error:', error);
+    if (error.response) console.error('Email response:', error.response.toString());
+    res.status(500).json({ error: error.message || 'Failed to process password reset request' });
+
   }
 });
 
