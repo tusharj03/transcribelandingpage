@@ -1,20 +1,22 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Audio Transcriber Pro | AI-Powered Transcription Tool</title>
+    <title>Resonote | AI-Powered Transcription Tool</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
 </head>
+
 <body>
     <header>
         <div class="container">
             <nav class="navbar">
                 <a href="#" class="logo">
-                    <i class="fas fa-headphones logo-icon"></i>
-                    AudioTranscriber Pro
+                    <img src="icons/resonote1080x308.png" alt="Resonote Logo" style="height: 40px; width: auto;">
                 </a>
                 <div class="nav-links">
                     <a href="#features">Features</a>
@@ -27,21 +29,26 @@
                     <button class="btn btn-outline" id="loginBtn">Log In</button>
                     <button class="btn btn-primary" id="getStartedBtn">Get Started</button>
                     <div id="userMenu" style="display: none; position: relative;">
-                        <button class="btn btn-outline" id="userDropdown" style="display: flex; align-items: center; gap: 8px;">
-                            <i class="fas fa-user-circle"></i> 
+                        <button class="btn btn-outline" id="userDropdown"
+                            style="display: flex; align-items: center; gap: 8px;">
+                            <i class="fas fa-user-circle"></i>
                             <span id="userEmail"></span>
                             <i class="fas fa-chevron-down" style="font-size: 12px;"></i>
                         </button>
-                        <div id="dropdownMenu" class="dropdown-content" style="display: none; position: absolute; top: 100%; right: 0; background: white; min-width: 200px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); border-radius: 8px; z-index: 1000; margin-top: 8px; border: 1px solid #e2e8f0;">
-                            <a href="account.html" style="display: flex; align-items: center; gap: 8px; padding: 12px 16px; color: #374151; text-decoration: none; border-bottom: 1px solid #f3f4f6;">
+                        <div id="dropdownMenu" class="dropdown-content"
+                            style="display: none; position: absolute; top: 100%; right: 0; background: white; min-width: 200px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); border-radius: 8px; z-index: 1000; margin-top: 8px; border: 1px solid #e2e8f0;">
+                            <a href="account.html"
+                                style="display: flex; align-items: center; gap: 8px; padding: 12px 16px; color: #374151; text-decoration: none; border-bottom: 1px solid #f3f4f6;">
                                 <i class="fas fa-cog" style="color: #6b7280; width: 16px;"></i>
                                 Account Settings
                             </a>
-                            <a href="download.html" style="display: flex; align-items: center; gap: 8px; padding: 12px 16px; color: #374151; text-decoration: none; border-bottom: 1px solid #f3f4f6;">
+                            <a href="download.html"
+                                style="display: flex; align-items: center; gap: 8px; padding: 12px 16px; color: #374151; text-decoration: none; border-bottom: 1px solid #f3f4f6;">
                                 <i class="fas fa-download" style="color: #6b7280; width: 16px;"></i>
                                 Download App
                             </a>
-                            <a href="#" id="logoutLink" style="display: flex; align-items: center; gap: 8px; padding: 12px 16px; color: #dc2626; text-decoration: none;">
+                            <a href="#" id="logoutLink"
+                                style="display: flex; align-items: center; gap: 8px; padding: 12px 16px; color: #dc2626; text-decoration: none;">
                                 <i class="fas fa-sign-out-alt" style="color: #dc2626; width: 16px;"></i>
                                 Sign Out
                             </a>
@@ -58,7 +65,8 @@
             <div class="hero-content">
                 <div class="hero-text">
                     <h1>Transform Audio & Video into Text with AI Precision</h1>
-                    <p>Audio Transcriber Pro converts your audio files, video recordings, and live conversations into accurate, editable text in seconds. Powered by advanced AI technology.</p>
+                    <p>Resonote converts your audio files, video recordings, and live conversations into accurate,
+                        editable text in seconds. Powered by advanced AI technology.</p>
                     <div class="hero-buttons">
                         <button class="btn btn-primary" id="heroDownloadBtn">
                             <i class="fas fa-download"></i> Download Now
@@ -68,17 +76,21 @@
                         </button>
                     </div>
                     <div id="userStatus" style="margin-top: 20px; display: none;">
-                        <div style="background: var(--secondary-light); padding: 12px; border-radius: var(--border-radius); display: flex; align-items: center; gap: 10px;">
+                        <div
+                            style="background: var(--secondary-light); padding: 12px; border-radius: var(--border-radius); display: flex; align-items: center; gap: 10px;">
                             <i class="fas fa-check-circle" style="color: var(--secondary);"></i>
                             <div>
-                                <strong>Welcome back!</strong> You have an active <span id="currentPlan"></span> subscription.
-                                <a href="download.html" style="margin-left: 10px; color: var(--primary); text-decoration: underline;">Download the app</a>
+                                <strong>Welcome back!</strong> You have an active <span id="currentPlan"></span>
+                                subscription.
+                                <a href="download.html"
+                                    style="margin-left: 10px; color: var(--primary); text-decoration: underline;">Download
+                                    the app</a>
                             </div>
                         </div>
                     </div>
                 </div>
                 <div class="hero-image">
-                    <img src="src/assets/hero-image.jpg" alt="Audio Transcriber Pro Interface">
+                    <img src="assets/hero-image.jpg" alt="Resonote Interface">
                     <div class="floating-card">
                         <i class="fas fa-microphone"></i>
                         <div>
@@ -127,7 +139,8 @@
                         <i class="fas fa-robot"></i>
                     </div>
                     <h3>AI-Powered Analysis</h3>
-                    <p>Get smart summaries, action items, and key insights automatically generated from your transcripts.</p>
+                    <p>Get smart summaries, action items, and key insights automatically generated from your
+                        transcripts.</p>
                     <div class="feature-badge pro">Pro+</div>
                 </div>
                 <div class="feature-card">
@@ -151,7 +164,8 @@
                         <i class="fas fa-history"></i>
                     </div>
                     <h3>History & Export</h3>
-                    <p>Access your transcription history and export in multiple formats including TXT, PDF, and DOCX.</p>
+                    <p>Access your transcription history and export in multiple formats including TXT, PDF, and DOCX.
+                    </p>
                     <div class="feature-badge basic">Basic+</div>
                 </div>
             </div>
@@ -281,14 +295,18 @@
                             <span>Dedicated account manager</span>
                         </div>
                     </div>
-                    <button class="btn btn-outline select-plan" data-plan="enterprise" data-price="49">Select Plan</button>
+                    <button class="btn btn-outline select-plan" data-plan="enterprise" data-price="49">Select
+                        Plan</button>
                 </div>
             </div>
             <div id="currentSubscription" style="text-align: center; margin-top: 30px; display: none;">
-                <div style="background: var(--primary-light); padding: 16px; border-radius: var(--border-radius); display: inline-block;">
+                <div
+                    style="background: var(--primary-light); padding: 16px; border-radius: var(--border-radius); display: inline-block;">
                     <i class="fas fa-info-circle" style="color: var(--primary);"></i>
-                    You currently have an active <strong id="activePlanName"></strong> subscription. 
-                    <a href="account.html" style="margin-left: 8px; color: var(--primary-dark); text-decoration: underline;">Manage account</a>
+                    You currently have an active <strong id="activePlanName"></strong> subscription.
+                    <a href="account.html"
+                        style="margin-left: 8px; color: var(--primary-dark); text-decoration: underline;">Manage
+                        account</a>
                 </div>
             </div>
         </div>
@@ -299,12 +317,13 @@
         <div class="container">
             <div class="section-title">
                 <h2>What Our Users Say</h2>
-                <p>Join thousands of satisfied users who have transformed their workflow with Audio Transcriber Pro</p>
+                <p>Join thousands of satisfied users who have transformed their workflow with Resonote</p>
             </div>
             <div class="testimonials-grid">
                 <div class="testimonial-card">
                     <div class="testimonial-content">
-                        <p>"This app has completely changed how I handle interviews. What used to take hours now takes minutes with incredible accuracy."</p>
+                        <p>"This app has completely changed how I handle interviews. What used to take hours now takes
+                            minutes with incredible accuracy."</p>
                     </div>
                     <div class="testimonial-author">
                         <div class="author-avatar">SJ</div>
@@ -316,7 +335,8 @@
                 </div>
                 <div class="testimonial-card">
                     <div class="testimonial-content">
-                        <p>"As a researcher, I transcribe countless hours of interviews. Audio Transcriber Pro has cut my transcription time by 80%."</p>
+                        <p>"As a researcher, I transcribe countless hours of interviews. Resonote has cut my
+                            transcription time by 80%."</p>
                     </div>
                     <div class="testimonial-author">
                         <div class="author-avatar">MR</div>
@@ -328,7 +348,8 @@
                 </div>
                 <div class="testimonial-card">
                     <div class="testimonial-content">
-                        <p>"The AI analysis features are incredible. It automatically extracts action items and summaries from our team meetings."</p>
+                        <p>"The AI analysis features are incredible. It automatically extracts action items and
+                            summaries from our team meetings."</p>
                     </div>
                     <div class="testimonial-author">
                         <div class="author-avatar">EC</div>
@@ -347,7 +368,7 @@
         <div class="container">
             <div class="section-title">
                 <h2>Frequently Asked Questions</h2>
-                <p>Find answers to common questions about Audio Transcriber Pro</p>
+                <p>Find answers to common questions about Resonote</p>
             </div>
             <div class="faq-grid">
                 <div class="faq-item">
@@ -356,7 +377,8 @@
                         <i class="fas fa-chevron-down"></i>
                     </div>
                     <div class="faq-answer">
-                        <p>We support a wide range of formats including MP3, WAV, M4A, FLAC, OGG, AAC, MP4, MOV, MKV, AVI, WebM, and more. If you have a specific format not listed, contact our support team.</p>
+                        <p>We support a wide range of formats including MP3, WAV, M4A, FLAC, OGG, AAC, MP4, MOV, MKV,
+                            AVI, WebM, and more. If you have a specific format not listed, contact our support team.</p>
                     </div>
                 </div>
                 <div class="faq-item">
@@ -365,7 +387,9 @@
                         <i class="fas fa-chevron-down"></i>
                     </div>
                     <div class="faq-answer">
-                        <p>Our AI-powered transcription achieves over 95% accuracy for clear audio with a single speaker. Accuracy may vary with background noise, multiple speakers, or strong accents. All transcriptions can be easily edited within the app.</p>
+                        <p>Our AI-powered transcription achieves over 95% accuracy for clear audio with a single
+                            speaker. Accuracy may vary with background noise, multiple speakers, or strong accents. All
+                            transcriptions can be easily edited within the app.</p>
                     </div>
                 </div>
                 <div class="faq-item">
@@ -374,7 +398,8 @@
                         <i class="fas fa-chevron-down"></i>
                     </div>
                     <div class="faq-answer">
-                        <p>Yes! Audio Transcriber Pro includes live audio recording and real-time transcription features. You can record meetings, interviews, or lectures and see the text appear as people speak.</p>
+                        <p>Yes! Resonote includes live audio recording and real-time transcription features. You can
+                            record meetings, interviews, or lectures and see the text appear as people speak.</p>
                     </div>
                 </div>
                 <div class="faq-item">
@@ -383,7 +408,9 @@
                         <i class="fas fa-chevron-down"></i>
                     </div>
                     <div class="faq-answer">
-                        <p>Absolutely. We take data security seriously. All files are processed locally on your device when possible, and any cloud processing uses encrypted connections. We never share or sell your data.</p>
+                        <p>Absolutely. We take data security seriously. All files are processed locally on your device
+                            when possible, and any cloud processing uses encrypted connections. We never share or sell
+                            your data.</p>
                     </div>
                 </div>
                 <div class="faq-item">
@@ -392,7 +419,8 @@
                         <i class="fas fa-chevron-down"></i>
                     </div>
                     <div class="faq-answer">
-                        <p>Currently, we support English with high accuracy. Additional languages including Spanish, French, German, and Chinese are in beta testing and will be available soon.</p>
+                        <p>Currently, we support English with high accuracy. Additional languages including Spanish,
+                            French, German, and Chinese are in beta testing and will be available soon.</p>
                     </div>
                 </div>
                 <div class="faq-item">
@@ -401,7 +429,8 @@
                         <i class="fas fa-chevron-down"></i>
                     </div>
                     <div class="faq-answer">
-                        <p>Yes, you can cancel your subscription at any time. You'll continue to have access to all features until the end of your billing period.</p>
+                        <p>Yes, you can cancel your subscription at any time. You'll continue to have access to all
+                            features until the end of your billing period.</p>
                     </div>
                 </div>
             </div>
@@ -413,12 +442,13 @@
         <div class="container">
             <div class="cta">
                 <h2>Ready to Transform Your Audio & Video?</h2>
-                <p>Join thousands of professionals who save hours every week with Audio Transcriber Pro</p>
+                <p>Join thousands of professionals who save hours every week with Resonote</p>
                 <div class="cta-buttons">
                     <button class="btn btn-light" id="ctaDownloadBtn">
                         <i class="fas fa-download"></i> Download Now
                     </button>
-                    <button class="btn btn-outline" style="background: rgba(255,255,255,0.1); color: white; border-color: rgba(255,255,255,0.3);">
+                    <button class="btn btn-outline"
+                        style="background: rgba(255,255,255,0.1); color: white; border-color: rgba(255,255,255,0.3);">
                         <i class="fas fa-play-circle"></i> Watch Demo
                     </button>
                 </div>
@@ -431,8 +461,9 @@
         <div class="container">
             <div class="footer-content">
                 <div class="footer-column">
-                    <h3>Audio Transcriber Pro</h3>
-                    <p style="color: #94a3b8; margin-bottom: 20px;">Transform your audio and video into accurate, editable text with AI-powered transcription.</p>
+                    <h3>Resonote</h3>
+                    <p style="color: #94a3b8; margin-bottom: 20px;">Transform your audio and video into accurate,
+                        editable text with AI-powered transcription.</p>
                     <div class="social-links">
                         <a href="#"><i class="fab fa-twitter"></i></a>
                         <a href="#"><i class="fab fa-facebook-f"></i></a>
@@ -469,7 +500,7 @@
                 </div>
             </div>
             <div class="footer-bottom">
-                <p>&copy; 2023 Audio Transcriber Pro. All rights reserved.</p>
+                <p>&copy; 2023 Resonote. All rights reserved.</p>
                 <p>Made with <i class="fas fa-heart" style="color: #ef4444;"></i> for content creators</p>
             </div>
         </div>
@@ -484,8 +515,9 @@
             <div class="modal-icon">
                 <i class="fas fa-lock"></i>
             </div>
-            <h2>Unlock Audio Transcriber Pro</h2>
-            <p>Choose a plan to download the app and start transcribing your audio and video files with AI precision.</p>
+            <h2>Unlock Resonote</h2>
+            <p>Choose a plan to download the app and start transcribing your audio and video files with AI precision.
+            </p>
             <div class="modal-buttons">
                 <button class="btn btn-primary" id="modalProBtn">
                     <i class="fas fa-crown"></i> Get Pro - $19/month
@@ -509,29 +541,34 @@
             </div>
             <h2>Sign In</h2>
             <p>Enter your email and password</p>
-            
+
             <div class="form-group" style="margin-bottom: 16px;">
                 <label for="loginEmail">Email</label>
-                <input type="email" id="loginEmail" placeholder="your@email.com" style="width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px;">
+                <input type="email" id="loginEmail" placeholder="your@email.com"
+                    style="width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px;">
             </div>
-            
+
             <div class="form-group" style="margin-bottom: 16px;">
                 <label for="loginPassword">Password</label>
-                <input type="password" id="loginPassword" placeholder="Your password" style="width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px;">
+                <input type="password" id="loginPassword" placeholder="Your password"
+                    style="width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px;">
             </div>
 
             <div style="text-align: right; margin-bottom: 20px;">
-                <a href="reset-password.html" style="color: var(--primary); text-decoration: none; font-size: 14px;">Forgot password?</a>
+                <a href="reset-password.html"
+                    style="color: var(--primary); text-decoration: none; font-size: 14px;">Forgot password?</a>
             </div>
-            
+
             <button class="btn btn-primary" id="submitLogin" style="width: 100%; margin-bottom: 16px;">
                 Sign In
             </button>
-            
-            <div id="loginMessage" style="text-align: center; color: #ef4444; font-size: 14px; margin-bottom: 16px;"></div>
-            
+
+            <div id="loginMessage" style="text-align: center; color: #ef4444; font-size: 14px; margin-bottom: 16px;">
+            </div>
+
             <p style="text-align: center; font-size: 14px; color: #64748b;">
-                Don't have an account? <a href="#" id="showRegister" style="color: var(--primary); text-decoration: none;">Create one</a>
+                Don't have an account? <a href="#" id="showRegister"
+                    style="color: var(--primary); text-decoration: none;">Create one</a>
             </p>
         </div>
     </div>
@@ -546,35 +583,41 @@
                 <i class="fas fa-user-plus"></i>
             </div>
             <h2>Create Account</h2>
-            <p>Sign up for Audio Transcriber Pro</p>
-            
+            <p>Sign up for Resonote</p>
+
             <div class="form-group" style="margin-bottom: 16px;">
                 <label for="registerEmail">Email</label>
-                <input type="email" id="registerEmail" placeholder="your@email.com" style="width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px;">
+                <input type="email" id="registerEmail" placeholder="your@email.com"
+                    style="width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px;">
             </div>
-            
+
             <div class="form-group" style="margin-bottom: 16px;">
                 <label for="registerPassword">Password</label>
-                <input type="password" id="registerPassword" placeholder="Minimum 8 characters" style="width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px;">
+                <input type="password" id="registerPassword" placeholder="Minimum 8 characters"
+                    style="width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px;">
             </div>
 
             <div class="form-group" style="margin-bottom: 20px;">
                 <label for="confirmPassword">Confirm Password</label>
-                <input type="password" id="confirmPassword" placeholder="Confirm your password" style="width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px;">
+                <input type="password" id="confirmPassword" placeholder="Confirm your password"
+                    style="width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px;">
             </div>
-            
+
             <button class="btn btn-primary" id="submitRegister" style="width: 100%; margin-bottom: 16px;">
                 Create Account
             </button>
-            
-            <div id="registerMessage" style="text-align: center; color: #ef4444; font-size: 14px; margin-bottom: 16px;"></div>
-            
+
+            <div id="registerMessage" style="text-align: center; color: #ef4444; font-size: 14px; margin-bottom: 16px;">
+            </div>
+
             <p style="text-align: center; font-size: 14px; color: #64748b;">
-                Already have an account? <a href="#" id="showLogin" style="color: var(--primary); text-decoration: none;">Sign in</a>
+                Already have an account? <a href="#" id="showLogin"
+                    style="color: var(--primary); text-decoration: none;">Sign in</a>
             </p>
         </div>
     </div>
 
     <script src="script.js"></script>
 </body>
+
 </html>

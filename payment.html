@@ -1,50 +1,218 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Payment - Audio Transcriber Pro</title>
+  <title>Payment - Resonote</title>
 
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet">
 
   <!-- Stripe.js -->
   <script src="https://js.stripe.com/v3/"></script>
 
   <style>
-    :root { --bg:#f8fafc; --card:#fff; --muted:#64748b; --primary:#6366f1; --danger:#ef4444; --success:#16a34a; --radius:10px; }
-    html,body{height:100%;margin:0;font-family:Inter,sans-serif;color:#0f172a;background:var(--bg);}
-    .container{max-width:1100px;margin:0 auto;padding:20px;}
-    .navbar{display:flex;justify-content:space-between;align-items:center;gap:12px;}
-    .logo{display:flex;gap:8px;align-items:center;text-decoration:none;color:#111827;font-weight:600;}
-    .btn{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;cursor:pointer;text-decoration:none;}
-    .btn-outline{border:1px solid #cbd5e1;background:transparent;color:#0f172a;}
-    .payment-container{display:flex;justify-content:center;padding:36px 20px;}
-    .card{width:100%;max-width:820px;background:var(--card);padding:26px;border-radius:var(--radius);box-shadow:0 10px 30px rgba(2,6,23,0.06);}
-    .payment-plan{display:flex;justify-content:space-between;align-items:center;margin:18px 0;padding:12px;background:#f1f5f9;border-radius:8px;}
-    label{display:block;margin-bottom:8px;font-size:14px;color:#0f172a;}
-    input[type="email"], input[type="text"], select{width:100%;padding:10px 12px;border-radius:8px;border:1px solid #e6edf3;font-size:14px;}
-    .form-row{display:flex;gap:12px;}
-    .form-row .form-group{flex:1;}
-    .small{font-size:13px;color:var(--muted);}
-    .btn-primary{background:var(--primary);color:#fff;border:0;padding:10px 14px;border-radius:8px;cursor:pointer;}
-    #spinner{display:none;}
-    #devBox{position:fixed;bottom:14px;left:14px;background:#ffffffcc;border:1px solid #e6edf3;padding:8px;border-radius:8px;z-index:9999;display:flex;gap:8px;align-items:center;box-shadow:0 6px 18px rgba(2,6,23,0.06);}
-    #devBox input{padding:6px 8px;font-size:13px;border-radius:6px;border:1px solid #e6edf3;}
-    #devBox button{padding:6px 8px;font-size:13px;border-radius:6px;}
-    .hidden{display:none !important;}
-    #payment-message{color:#dc2626;font-size:16px;line-height:20px;padding-top:12px;text-align:center;background:#fef2f2;padding:12px;border-radius:8px;border:1px solid #fecaca;}
-    #payment-message.success{background:#f0fdf4;color:#16a34a;border-color:#bbf7d0;}
-    @media(max-width:640px){.form-row{flex-direction:column;}#devBox{left:8px;right:8px;bottom:8px;}}
+    :root {
+      --bg: #f8fafc;
+      --card: #fff;
+      --muted: #64748b;
+      --primary: #6366f1;
+      --danger: #ef4444;
+      --success: #16a34a;
+      --radius: 10px;
+    }
+
+    html,
+    body {
+      height: 100%;
+      margin: 0;
+      font-family: Inter, sans-serif;
+      color: #0f172a;
+      background: var(--bg);
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    .navbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      text-decoration: none;
+      color: #111827;
+      font-weight: 600;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    .btn-outline {
+      border: 1px solid #cbd5e1;
+      background: transparent;
+      color: #0f172a;
+    }
+
+    .payment-container {
+      display: flex;
+      justify-content: center;
+      padding: 36px 20px;
+    }
+
+    .card {
+      width: 100%;
+      max-width: 820px;
+      background: var(--card);
+      padding: 26px;
+      border-radius: var(--radius);
+      box-shadow: 0 10px 30px rgba(2, 6, 23, 0.06);
+    }
+
+    .payment-plan {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 18px 0;
+      padding: 12px;
+      background: #f1f5f9;
+      border-radius: 8px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 14px;
+      color: #0f172a;
+    }
+
+    input[type="email"],
+    input[type="text"],
+    select {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid #e6edf3;
+      font-size: 14px;
+    }
+
+    .form-row {
+      display: flex;
+      gap: 12px;
+    }
+
+    .form-row .form-group {
+      flex: 1;
+    }
+
+    .small {
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+      border: 0;
+      padding: 10px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    #spinner {
+      display: none;
+    }
+
+    #devBox {
+      position: fixed;
+      bottom: 14px;
+      left: 14px;
+      background: #ffffffcc;
+      border: 1px solid #e6edf3;
+      padding: 8px;
+      border-radius: 8px;
+      z-index: 9999;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      box-shadow: 0 6px 18px rgba(2, 6, 23, 0.06);
+    }
+
+    #devBox input {
+      padding: 6px 8px;
+      font-size: 13px;
+      border-radius: 6px;
+      border: 1px solid #e6edf3;
+    }
+
+    #devBox button {
+      padding: 6px 8px;
+      font-size: 13px;
+      border-radius: 6px;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    #payment-message {
+      color: #dc2626;
+      font-size: 16px;
+      line-height: 20px;
+      padding-top: 12px;
+      text-align: center;
+      background: #fef2f2;
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid #fecaca;
+    }
+
+    #payment-message.success {
+      background: #f0fdf4;
+      color: #16a34a;
+      border-color: #bbf7d0;
+    }
+
+    @media(max-width:640px) {
+      .form-row {
+        flex-direction: column;
+      }
+
+      #devBox {
+        left: 8px;
+        right: 8px;
+        bottom: 8px;
+      }
+    }
   </style>
 </head>
+
 <body>
   <header>
     <div class="container">
       <nav class="navbar" role="navigation">
-        <a class="logo" href="index.html"><i class="fas fa-headphones"></i><span>AudioTranscriber Pro</span></a>
-        <div class="nav-buttons"><a href="index.html" class="btn btn-outline"><i class="fas fa-arrow-left"></i> Back to Home</a></div>
+        <a class="logo" href="index.html"><img src="icons/resonote1080x308.png" alt="Resonote Logo"
+            style="height: 40px; width: auto;"></a>
+        <div class="nav-buttons"><a href="index.html" class="btn btn-outline"><i class="fas fa-arrow-left"></i> Back to
+            Home</a></div>
       </nav>
     </div>
   </header>
@@ -95,7 +263,8 @@
         <div style="margin-top:14px;">
           <label style="display:flex;gap:8px;align-items:flex-start;cursor:pointer;">
             <input id="terms" type="checkbox" required style="margin-top:6px" />
-            <span class="small">I agree to the <a href="#" target="_blank">Terms of Service</a> and <a href="#" target="_blank">Privacy Policy</a>.</span>
+            <span class="small">I agree to the <a href="#" target="_blank">Terms of Service</a> and <a href="#"
+                target="_blank">Privacy Policy</a>.</span>
           </label>
         </div>
 
@@ -108,7 +277,7 @@
         </div>
 
         <div id="payment-message" class="hidden" aria-live="polite"></div>
-        
+
         <div class="small" style="margin-top:20px;text-align:center;color:var(--muted);">
           <i class="fas fa-shield-alt"></i> Your payment information is secure and encrypted
         </div>
@@ -125,11 +294,11 @@
   </div>
 
   <script>
-    document.addEventListener('DOMContentLoaded', async function() {
+    document.addEventListener('DOMContentLoaded', async function () {
       // Check if plan is selected
       const selectedPlan = sessionStorage.getItem('selectedPlan');
       const selectedPrice = sessionStorage.getItem('selectedPrice');
-      
+
       if (!selectedPlan || !selectedPrice) {
         alert('Please select a plan first');
         window.location.href = 'index.html';
@@ -137,8 +306,8 @@
       }
 
       // Update UI with selected plan
-      document.getElementById('selectedPlanName').textContent = 
-          selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1) + ' Plan';
+      document.getElementById('selectedPlanName').textContent =
+        selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1) + ' Plan';
       document.getElementById('selectedPlanPrice').textContent = selectedPrice;
       document.getElementById('button-text').textContent = `Start 14-Day Free Trial - $${selectedPrice}/month after`;
 
@@ -146,18 +315,18 @@
       let stripe;
       let elements;
       let cardElement;
-      
+
       try {
         // Get Stripe publishable key from server
         const response = await fetch('/api/config');
         const config = await response.json();
-        
+
         if (!config.publishableKey) {
           throw new Error('Stripe publishable key not configured');
         }
-        
+
         stripe = Stripe(config.publishableKey);
-        
+
         // Initialize Stripe Elements
         elements = stripe.elements({
           appearance: {
@@ -173,7 +342,7 @@
             }
           }
         });
-        
+
         // Create card element
         cardElement = elements.create('card', {
           style: {
@@ -186,9 +355,9 @@
             }
           }
         });
-        
+
         cardElement.mount('#card-element');
-        
+
       } catch (error) {
         console.error('Stripe initialization error:', error);
         showMessage('Payment system temporarily unavailable. Please try again later.', 'error');
@@ -200,25 +369,25 @@
       const submitButton = document.getElementById('submit-button');
       const buttonText = document.getElementById('button-text');
       const spinner = document.getElementById('spinner');
-      
+
       form.addEventListener('submit', async (event) => {
         event.preventDefault();
-        
+
         if (!stripe || !elements) {
           showMessage('Payment system not initialized. Please refresh the page.', 'error');
           return;
         }
-        
+
         // Disable form submission
         submitButton.disabled = true;
         buttonText.textContent = 'Setting up subscription...';
         spinner.classList.remove('hidden');
-        
+
         // Get form data
         const email = document.getElementById('email').value;
         const name = document.getElementById('name').value;
         const terms = document.getElementById('terms').checked;
-        
+
         if (!email || !name || !terms) {
           showMessage('Please fill in all required fields and accept the terms.', 'error');
           submitButton.disabled = false;
@@ -281,7 +450,7 @@
           sessionStorage.setItem('paidPlan', selectedPlan);
 
           showMessage('Subscription created successfully! Redirecting...', 'success');
-          
+
           // Redirect to download page
           setTimeout(() => {
             window.location.href = 'download.html';
@@ -290,7 +459,7 @@
         } catch (error) {
           console.error('Payment error:', error);
           showMessage(error.message || 'Failed to create subscription. Please try again.', 'error');
-          
+
           // Re-enable form
           submitButton.disabled = false;
           buttonText.textContent = `Start 14-Day Free Trial - $${selectedPrice}/month after`;
@@ -316,9 +485,9 @@
         const code = document.getElementById('devCode').value?.trim();
         const email = document.getElementById('devEmail').value?.trim() || 'dev@test.com';
         const devMsg = document.getElementById('devMsg');
-        
+
         devMsg.textContent = '';
-        
+
         if (!code) {
           devMsg.style.color = 'var(--danger)';
           devMsg.textContent = 'Enter code';
@@ -341,10 +510,10 @@
             sessionStorage.setItem('userEmail', email);
             sessionStorage.setItem('paymentMethod', 'developer');
             sessionStorage.setItem('paidPlan', 'pro');
-            
+
             devMsg.style.color = 'var(--success)';
             devMsg.textContent = 'Access granted — redirecting...';
-            
+
             setTimeout(() => {
               window.location.href = 'download.html';
             }, 1000);
@@ -364,7 +533,7 @@
       const paymentMessage = document.getElementById('payment-message');
       paymentMessage.textContent = message;
       paymentMessage.className = '';
-      
+
       if (type === 'error') {
         paymentMessage.style.background = '#fef2f2';
         paymentMessage.style.color = '#dc2626';
@@ -375,9 +544,9 @@
         paymentMessage.style.border = '1px solid #bbf7d0';
         paymentMessage.classList.add('success');
       }
-      
+
       paymentMessage.classList.remove('hidden');
-      
+
       // Auto-hide success messages
       if (type === 'success') {
         setTimeout(() => {
@@ -387,4 +556,5 @@
     }
   </script>
 </body>
+
 </html>

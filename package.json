@@ -1,5 +1,5 @@
 {
-  "name": "audio-transcriber-pro",
+  "name": "resonote",
   "version": "1.0.0",
   "description": "AI-powered audio and video transcription tool",
   "main": "server.js",
@@ -29,6 +29,6 @@
     "ai",
     "speech-to-text"
   ],
-  "author": "Audio Transcriber Pro",
+  "author": "Resonote",
   "license": "MIT"
 }

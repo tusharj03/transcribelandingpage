@@ -26,16 +26,16 @@ async function connectToDatabase() {
     const client = new MongoClient(process.env.MONGODB_URI);
     await client.connect();
     db = client.db('audio_transcriber');
-    
+
     usersCollection = db.collection('users');
     subscriptionsCollection = db.collection('subscriptions');
     downloadsCollection = db.collection('downloads');
-    
+
     // Create indexes
     await usersCollection.createIndex({ email: 1 }, { unique: true });
     await subscriptionsCollection.createIndex({ userEmail: 1 });
     await downloadsCollection.createIndex({ userEmail: 1 });
-    
+
     console.log('✅ Connected to MongoDB');
   } catch (error) {
     console.error('❌ MongoDB connection error:', error);
@@ -53,7 +53,7 @@ const PLANS = {
   },
   pro: {
     price: 1900,
-    name: 'Pro', 
+    name: 'Pro',
     features: ['20 hours transcription/month', 'Audio & video support', 'Screen recording', 'AI analysis'],
     stripePriceId: process.env.STRIPE_PRO_PRICE_ID
   },
@@ -81,13 +81,13 @@ const emailTransporter = nodemailer.createTransport({
 app.get('/api/debug-email-config', (req, res) => {
   const config = {
     SMTP_USER: process.env.SMTP_USER ? '✅ Set' : '❌ Missing',
-    SMTP_PASS: process.env.SMTP_PASS ? '✅ Set' : '❌ Missing', 
+    SMTP_PASS: process.env.SMTP_PASS ? '✅ Set' : '❌ Missing',
     SMTP_HOST: process.env.SMTP_HOST || 'smtp.gmail.com',
     SMTP_PORT: process.env.SMTP_PORT || 587,
     BASE_URL: process.env.BASE_URL || 'Not set',
     NODE_ENV: process.env.NODE_ENV || 'Not set'
   };
-  
+
   console.log('🔧 Email Configuration:', config);
   res.json(config);
 });
@@ -136,8 +136,8 @@ app.get('/reset-password.html', (req, res) => res.sendFile(path.join(__dirname, 
 app.get('/api/config', (req, res) => {
   const publishableKey = process.env.STRIPE_PUBLISHABLE_KEY || null;
   if (!publishableKey) return res.status(500).json({ error: 'Stripe not configured' });
-  
-  res.json({ 
+
+  res.json({
     publishableKey,
     plans: Object.keys(PLANS).reduce((acc, planKey) => {
       acc[planKey] = {
@@ -154,7 +154,7 @@ app.get('/api/config', (req, res) => {
 app.post('/api/register', async (req, res) => {
   try {
     const { email, password } = req.body;
-    
+
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password required' });
     }
@@ -172,17 +172,17 @@ app.post('/api/register', async (req, res) => {
 
     // Check if user exists
     const existingUser = await usersCollection.findOne({ email });
-    
+
     if (existingUser) {
       return res.status(400).json({ error: 'Email already registered' });
     }
 
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 12);
-    
+
     // Create verification token
     const verificationToken = jwt.sign({ email }, JWT_SECRET, { expiresIn: '24h' });
-    
+
     // Create new user
     const newUser = {
       email,
@@ -194,12 +194,12 @@ app.post('/api/register', async (req, res) => {
       createdAt: new Date(),
       lastLogin: null
     };
-    
+
     const result = await usersCollection.insertOne(newUser);
-    
+
     // Send verification email
     await sendVerificationEmail(email, verificationToken);
-    
+
     res.json({
       success: true,
       message: 'Registration successful! Please check your email for verification.',
@@ -214,11 +214,11 @@ app.post('/api/register', async (req, res) => {
 
   } catch (error) {
     console.error('Registration error:', error);
-    
+
     if (error.code === 11000) {
       return res.status(400).json({ error: 'Email already exists' });
     }
-    
+
     console.error('Email send failed:', err);
     return res.status(500).json({ error: err.message });
   }
@@ -227,16 +227,16 @@ app.post('/api/register', async (req, res) => {
 // Email verification endpoint
 app.post('/api/verify-email', async (req, res) => {
   const { token } = req.body;
-  
+
   if (!token) {
     return res.status(400).json({ error: 'Verification token required' });
   }
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-    const user = await usersCollection.findOne({ 
-      email: decoded.email, 
-      verificationToken: token 
+    const user = await usersCollection.findOne({
+      email: decoded.email,
+      verificationToken: token
     });
 
     if (!user) {
@@ -246,12 +246,12 @@ app.post('/api/verify-email', async (req, res) => {
     // Update user as verified
     await usersCollection.updateOne(
       { email: decoded.email },
-      { 
-        $set: { 
+      {
+        $set: {
           emailVerified: true,
           verificationToken: null,
           status: 'inactive' // Change from unverified to inactive
-        } 
+        }
       }
     );
 
@@ -269,14 +269,14 @@ app.post('/api/verify-email', async (req, res) => {
 // Send verification email
 app.post('/api/send-verification-email', async (req, res) => {
   const { email } = req.body;
-  
+
   if (!email) {
     return res.status(400).json({ error: 'Email required' });
   }
 
   try {
     const user = await usersCollection.findOne({ email });
-    
+
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
@@ -287,7 +287,7 @@ app.post('/api/send-verification-email', async (req, res) => {
 
     // Generate new verification token
     const verificationToken = jwt.sign({ email }, JWT_SECRET, { expiresIn: '24h' });
-    
+
     // Update user with new token
     await usersCollection.updateOne(
       { email },
@@ -312,44 +312,44 @@ app.post('/api/send-verification-email', async (req, res) => {
 // Fixed password reset endpoint
 app.post('/api/request-password-reset', async (req, res) => {
   console.log('🔑 Password reset requested for:', req.body?.email);
-  
+
   const { email } = req.body;
-  
+
   if (!email) {
     return res.status(400).json({ error: 'Email required' });
   }
 
   try {
     const user = await usersCollection.findOne({ email });
-    
+
     if (!user) {
       // Don't reveal whether email exists
       console.log('📧 User not found, but returning success for security');
-      return res.json({ 
+      return res.json({
         success: true,
-        message: 'If an account with that email exists, a password reset link has been sent.' 
+        message: 'If an account with that email exists, a password reset link has been sent.'
       });
     }
 
     // Generate reset token
-    const resetToken = jwt.sign({ 
-      userId: user._id, 
-      email: user.email 
+    const resetToken = jwt.sign({
+      userId: user._id,
+      email: user.email
     }, JWT_SECRET, { expiresIn: '1h' });
-    
+
     // Store reset token
     await usersCollection.updateOne(
       { email },
-      { 
-        $set: { 
+      {
+        $set: {
           resetToken,
           resetTokenExpires: new Date(Date.now() + 3600000) // 1 hour
-        } 
+        }
       }
     );
 
     console.log('📧 Attempting to send reset email to:', email);
-    
+
     // Send reset email
     await sendPasswordResetEmail(email, resetToken);
 
@@ -363,9 +363,9 @@ app.post('/api/request-password-reset', async (req, res) => {
   } catch (error) {
     console.error('❌ Password reset request error:', error);
     console.error('❌ Error stack:', error.stack);
-    
+
     // More detailed error response
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to process password reset request',
       details: process.env.NODE_ENV === 'development' ? error.message : 'Please try again later'
     });
@@ -375,15 +375,15 @@ app.post('/api/request-password-reset', async (req, res) => {
 // Reset password
 app.post('/api/reset-password', async (req, res) => {
   const { token, newPassword } = req.body;
-  
+
   if (!token || !newPassword) {
     return res.status(400).json({ error: 'Token and new password required' });
   }
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-    const user = await usersCollection.findOne({ 
-      email: decoded.email, 
+    const user = await usersCollection.findOne({
+      email: decoded.email,
       resetToken: token,
       resetTokenExpires: { $gt: new Date() }
     });
@@ -399,16 +399,16 @@ app.post('/api/reset-password', async (req, res) => {
 
     // Hash new password
     const hashedPassword = await bcrypt.hash(newPassword, 12);
-    
+
     // Update password and clear reset token
     await usersCollection.updateOne(
       { email: decoded.email },
-      { 
-        $set: { 
+      {
+        $set: {
           password: hashedPassword,
           resetToken: null,
-          resetTokenExpires: null 
-        } 
+          resetTokenExpires: null
+        }
       }
     );
 
@@ -426,14 +426,14 @@ app.post('/api/reset-password', async (req, res) => {
 // Website Login
 app.post('/api/login', async (req, res) => {
   const { email, password } = req.body;
-  
+
   if (!email || !password) {
     return res.status(400).json({ error: 'Email and password required' });
   }
 
   try {
     const user = await usersCollection.findOne({ email });
-    
+
     if (!user) {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
@@ -454,13 +454,13 @@ app.post('/api/login', async (req, res) => {
       { email },
       { $set: { lastLogin: new Date() } }
     );
-    
+
     // Create session token
-    const token = jwt.sign({ 
-      userId: user._id, 
-      email: user.email 
+    const token = jwt.sign({
+      userId: user._id,
+      email: user.email
     }, JWT_SECRET, { expiresIn: '30d' });
-    
+
     res.json({
       success: true,
       user: {
@@ -481,24 +481,24 @@ app.post('/api/login', async (req, res) => {
 // Enhanced DMG App Login with better error handling
 app.post('/api/dmg-login', async (req, res) => {
   const { email, password } = req.body;
-  
+
   if (!email || !password) {
-    return res.status(400).json({ 
+    return res.status(400).json({
       success: false,
-      error: 'Email and password required' 
+      error: 'Email and password required'
     });
   }
 
   try {
     console.log('🔐 DMG Login attempt for:', email);
-    
+
     const user = await usersCollection.findOne({ email });
-    
+
     if (!user) {
       console.log('❌ User not found:', email);
-      return res.status(401).json({ 
+      return res.status(401).json({
         success: false,
-        error: 'Invalid email or password' 
+        error: 'Invalid email or password'
       });
     }
 
@@ -518,15 +518,15 @@ app.post('/api/dmg-login', async (req, res) => {
     const validPassword = await bcrypt.compare(password, user.password);
     if (!validPassword) {
       console.log('❌ Invalid password for:', email);
-      return res.status(401).json({ 
+      return res.status(401).json({
         success: false,
-        error: 'Invalid email or password' 
+        error: 'Invalid email or password'
       });
     }
 
     // Check subscription status - allow login even without active subscription
     const isSubscribed = ['trialing', 'active', 'past_due'].includes(user.status);
-    
+
     if (!isSubscribed) {
       console.log('⚠️ No active subscription for:', email);
       // Don't block login, just inform user
@@ -538,17 +538,17 @@ app.post('/api/dmg-login', async (req, res) => {
       { email },
       { $set: { lastLogin: new Date() } }
     );
-    
+
     // Create token for DMG app
-    const token = jwt.sign({ 
-      userId: user._id, 
+    const token = jwt.sign({
+      userId: user._id,
       email: user.email,
       plan: user.plan,
       status: user.status
     }, JWT_SECRET, { expiresIn: '30d' });
 
     console.log('✅ DMG Login successful for:', email);
-    
+
     res.json({
       success: true,
       user: {
@@ -562,12 +562,12 @@ app.post('/api/dmg-login', async (req, res) => {
       },
       token
     });
-    
+
   } catch (error) {
     console.error('❌ DMG login error:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
-      error: 'Login service temporarily unavailable. Please try again.' 
+      error: 'Login service temporarily unavailable. Please try again.'
     });
   }
 });
@@ -575,14 +575,14 @@ app.post('/api/dmg-login', async (req, res) => {
 // Simple email-based login (legacy - for backward compatibility)
 app.post('/api/simple-login', async (req, res) => {
   const { email } = req.body;
-  
+
   if (!email) {
     return res.status(400).json({ error: 'Email required' });
   }
 
   try {
     const user = await usersCollection.findOne({ email });
-    
+
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
@@ -592,7 +592,7 @@ app.post('/api/simple-login', async (req, res) => {
       { email },
       { $set: { lastLogin: new Date() } }
     );
-    
+
     res.json({
       success: true,
       user: {
@@ -611,27 +611,27 @@ app.post('/api/simple-login', async (req, res) => {
 // DMG App Authentication - Password Free (legacy)
 app.post('/api/dmg-auth', async (req, res) => {
   const { email } = req.body;
-  
+
   if (!email) {
     return res.status(400).json({ error: 'Email required' });
   }
 
   try {
     const user = await usersCollection.findOne({ email });
-    
+
     if (!user) {
-      return res.json({ 
+      return res.json({
         authenticated: false,
-        error: 'No account found with this email. Please subscribe first.' 
+        error: 'No account found with this email. Please subscribe first.'
       });
     }
 
     const isSubscribed = ['trialing', 'active', 'past_due'].includes(user.status);
-    
+
     if (!isSubscribed) {
-      return res.json({ 
+      return res.json({
         authenticated: false,
-        error: 'No active subscription found for this email' 
+        error: 'No active subscription found for this email'
       });
     }
 
@@ -640,12 +640,12 @@ app.post('/api/dmg-auth', async (req, res) => {
       { email },
       { $set: { lastLogin: new Date() } }
     );
-    
+
     // Create token for DMG app
-    const token = jwt.sign({ 
-      userId: user._id, 
+    const token = jwt.sign({
+      userId: user._id,
       email: user.email,
-      plan: user.plan 
+      plan: user.plan
     }, JWT_SECRET, { expiresIn: '30d' });
 
     res.json({
@@ -668,23 +668,23 @@ app.post('/api/dmg-auth', async (req, res) => {
 // Verify subscription for DMG app
 app.post('/api/verify-subscription', async (req, res) => {
   const { email } = req.body;
-  
+
   if (!email) {
     return res.status(400).json({ error: 'Email required' });
   }
 
   try {
     const user = await usersCollection.findOne({ email });
-    
+
     if (!user) {
-      return res.json({ 
-        subscribed: false, 
-        error: 'No account found with this email' 
+      return res.json({
+        subscribed: false,
+        error: 'No account found with this email'
       });
     }
 
     const isSubscribed = ['trialing', 'active', 'past_due'].includes(user.status);
-    
+
     res.json({
       subscribed: isSubscribed,
       plan: user.plan,
@@ -703,7 +703,7 @@ app.post('/api/verify-subscription', async (req, res) => {
 app.post('/api/create-subscription', async (req, res) => {
   try {
     const { email, plan, paymentMethodId } = req.body;
-    
+
     if (!email || !plan || !paymentMethodId) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
@@ -732,7 +732,7 @@ app.post('/api/create-subscription', async (req, res) => {
 
     if (existingCustomers.data.length > 0) {
       customer = existingCustomers.data[0];
-      
+
       // Attach payment method to existing customer
       await stripe.paymentMethods.attach(paymentMethodId, {
         customer: customer.id,
@@ -780,48 +780,58 @@ app.post('/api/create-subscription', async (req, res) => {
         createdAt: new Date(),
         lastLogin: new Date()
       });
-      
+
       console.log(`✅ Auto-created user account for: ${email}`);
-    } else {
-      // Update existing user
-      await usersCollection.updateOne(
-        { email },
-        {
-          $set: {
-            stripeCustomerId: customer.id,
-            stripeSubscriptionId: subscription.id,
-            plan: plan,
-            status: 'trialing',
-            subscribedAt: new Date(),
-            lastLogin: new Date()
-          }
-        }
-      );
     }
 
     res.json({
+      success: true,
       subscriptionId: subscription.id,
-      clientSecret: subscription.latest_invoice.payment_intent.client_secret,
-      status: subscription.status
+      clientSecret: subscription.latest_invoice.payment_intent.client_secret
     });
 
-  } catch (err) {
-    console.error('create-subscription error:', err);
-    res.status(500).json({ error: err.message || 'Failed to create subscription' });
+  } catch (error) {
+    console.error('Create subscription error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Create Customer Portal Session
+app.post('/api/create-portal-session', authenticateToken, async (req, res) => {
+  try {
+    const user = await usersCollection.findOne({ email: req.user.email });
+
+    if (!user || !user.stripeCustomerId) {
+      return res.status(400).json({ error: 'No billing account found' });
+    }
+
+    // This is the URL to which the customer will be redirected after they are
+    // done managing their billing with the portal.
+    const returnUrl = `${process.env.BASE_URL || 'http://localhost:3000'}/account.html`;
+
+    const portalSession = await stripe.billingPortal.sessions.create({
+      customer: user.stripeCustomerId,
+      return_url: returnUrl,
+    });
+
+    res.json({ url: portalSession.url });
+  } catch (error) {
+    console.error('Portal session error:', error);
+    res.status(500).json({ error: 'Failed to create portal session' });
   }
 });
 
 // Check user subscription status (for website)
 app.post('/api/check-subscription', async (req, res) => {
   const { email } = req.body;
-  
+
   if (!email) {
     return res.status(400).json({ error: 'Email required' });
   }
 
   try {
     const user = await usersCollection.findOne({ email });
-    
+
     if (!user) {
       return res.json({ subscribed: false });
     }
@@ -859,8 +869,8 @@ app.post('/api/cancel-subscription', authenticateToken, async (req, res) => {
     // Update database
     await usersCollection.updateOne(
       { email: userEmail },
-      { 
-        $set: { 
+      {
+        $set: {
           status: 'canceled',
           cancelAtPeriodEnd: true,
           currentPeriodEnd: subscription.current_period_end
@@ -887,12 +897,12 @@ app.get('/api/user/profile', authenticateToken, async (req, res) => {
 
   try {
     const user = await usersCollection.findOne({ email: userEmail });
-    
+
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    res.json({ 
+    res.json({
       user: {
         id: user._id,
         email: user.email,
@@ -922,7 +932,7 @@ app.post('/api/track-download', authenticateToken, async (req, res) => {
       version,
       downloadedAt: new Date()
     });
-    
+
     res.json({ success: true });
   } catch (error) {
     console.error('Download tracking error:', error);
@@ -931,7 +941,7 @@ app.post('/api/track-download', authenticateToken, async (req, res) => {
 });
 
 // Webhook handler for Stripe events
-app.post('/webhook', bodyParser.raw({type: 'application/json'}), async (req, res) => {
+app.post('/webhook', bodyParser.raw({ type: 'application/json' }), async (req, res) => {
   const sig = req.headers['stripe-signature'];
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
@@ -953,19 +963,19 @@ app.post('/webhook', bodyParser.raw({type: 'application/json'}), async (req, res
       const subscription = event.data.object;
       await handleSubscriptionChange(subscription);
       break;
-    
+
     case 'invoice.payment_succeeded':
       const invoice = event.data.object;
       await handleSuccessfulPayment(invoice);
       break;
-      
+
     case 'invoice.payment_failed':
       const failedInvoice = event.data.object;
       await handleFailedPayment(failedInvoice);
       break;
   }
 
-  res.json({received: true});
+  res.json({ received: true });
 });
 
 async function handleSubscriptionChange(subscription) {
@@ -986,7 +996,7 @@ async function handleSubscriptionChange(subscription) {
         }
       }
     );
-    
+
     console.log(`Updated subscription ${subscription.id} to status: ${status}`);
   } catch (error) {
     console.error('Error updating subscription status:', error);
@@ -995,7 +1005,7 @@ async function handleSubscriptionChange(subscription) {
 
 async function handleSuccessfulPayment(invoice) {
   console.log(`Payment succeeded for invoice ${invoice.id}`);
-  
+
   // Update user status if it was past_due
   try {
     await usersCollection.updateOne(
@@ -1009,7 +1019,7 @@ async function handleSuccessfulPayment(invoice) {
 
 async function handleFailedPayment(invoice) {
   console.log(`Payment failed for invoice ${invoice.id}`);
-  
+
   // Update user status to past_due
   try {
     await usersCollection.updateOne(
@@ -1024,7 +1034,7 @@ async function handleFailedPayment(invoice) {
 // Email sending functions
 async function sendVerificationEmail(email, token) {
   const verificationUrl = `${process.env.BASE_URL || 'https://audiotranscriberlanding.vercel.app'}/verify-email.html?token=${token}`;
-  
+
   try {
     await emailTransporter.sendMail({
       from: process.env.SMTP_FROM || 'noreply@audiotranscriberpro.com',
@@ -1055,15 +1065,15 @@ async function sendVerificationEmail(email, token) {
 
 async function sendPasswordResetEmail(email, token) {
   const resetUrl = `${process.env.BASE_URL || 'https://audiotranscriberlanding.vercel.app'}/reset-password.html?token=${token}`;
-  
+
   console.log('📧 Preparing to send email to:', email);
   console.log('🔗 Reset URL:', resetUrl);
-  
+
   try {
     // Test SMTP connection first
     await emailTransporter.verify();
     console.log('✅ SMTP connection verified');
-    
+
     const mailOptions = {
       from: process.env.SMTP_FROM || process.env.SMTP_USER,
       to: email,
@@ -1090,7 +1100,7 @@ async function sendPasswordResetEmail(email, token) {
     const result = await emailTransporter.sendMail(mailOptions);
     console.log('✅ Email sent successfully:', result.messageId);
     return true;
-    
+
   } catch (error) {
     console.error('❌ Email sending failed:', error);
     console.error('❌ SMTP error details:', {
@@ -1129,7 +1139,7 @@ app.post('/api/developer-bypass', async (req, res) => {
         },
         { upsert: true }
       );
-      
+
       console.log(`🔓 Developer bypass granted for ${email}`);
       res.json({ success: true, message: 'Developer access granted' });
     } catch (error) {
@@ -1144,7 +1154,7 @@ app.post('/api/developer-bypass', async (req, res) => {
 // === Start server ===
 async function startServer() {
   await connectToDatabase();
-  
+
   app.listen(PORT, () => {
     console.log(`🚀 Server listening: http://localhost:${PORT}`);
     console.log(`💳 Stripe secret loaded: ${process.env.STRIPE_SECRET_KEY ? '✅' : '❌'}`);

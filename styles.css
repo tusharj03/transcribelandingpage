@@ -1,25 +1,50 @@
 :root {
-    --primary: #6366f1;
-    --primary-dark: #4f46e5;
-    --primary-light: #e0e7ff;
-    --secondary: #10b981;
-    --secondary-dark: #059669;
-    --secondary-light: #d1fae5;
-    --accent: #f59e0b;
-    --accent-light: #fef3c7;
-    --danger: #ef4444;
-    --danger-light: #fef2f2;
-    --warning: #f59e0b;
-    --warning-light: #fffbeb;
-    --light: #f8fafc;
-    --dark: #1e293b;
-    --gray: #64748b;
-    --gray-light: #f1f5f9;
+    /* === PRIMARY — Mid Blue from the logo === */
+    --primary: #2D7FD3;
+    /* main brand blue */
+    --primary-dark: #1C5FA7;
+    /* deep blue */
+    --primary-light: #A9D4F8;
+    /* soft washed blue */
+
+    /* === SECONDARY — Purple tail of the logo === */
+    --secondary: #9F3EE8;
+    --secondary-dark: #7322B2;
+    --secondary-light: #E5C8FF;
+
+    /* === ACCENT — Green/teal transition in the logo === */
+    --accent: #21B5C4;
+    --accent-dark: #0E7DA1;
+    --accent-light: #9AE3EC;
+
+    /* === RAPID (kept the same unless you want to recolor it) === */
+    --rapid: #22C55E;
+    --rapid-dark: #16A34A;
+    --rapid-light: #DCFCE7;
+
+    /* === STATUS COLORS === */
+    --danger: #EF4444;
+    --danger-dark: #DC2626;
+    --danger-light: #FEF2F2;
+
+    --warning: #F59E0B;
+    --warning-light: #FFFBEB;
+
+    /* === BASE COLORS === */
+    --light: #F8FAFC;
+    --dark: #1E293B;
+    --gray: #64748B;
+    --gray-light: #F1F5F9;
+
+    /* === UI STRUCTURE === */
     --border-radius: 12px;
     --border-radius-lg: 20px;
-    --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+        0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
+        0 4px 6px -2px rgba(0, 0, 0, 0.05);
     --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+
     --transition: all 0.3s ease;
 }
 

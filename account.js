@@ -1,7 +1,7 @@
-document.addEventListener('DOMContentLoaded', async function() {
+document.addEventListener('DOMContentLoaded', async function () {
     const userEmail = sessionStorage.getItem('userEmail');
     const authToken = sessionStorage.getItem('authToken');
-    
+
     if (!userEmail) {
         alert('Please log in first');
         window.location.href = 'index.html';
@@ -11,24 +11,24 @@ document.addEventListener('DOMContentLoaded', async function() {
     await loadAccountInfo();
 
     // Update payment method handler
-    document.getElementById('updatePayment').addEventListener('click', function() {
-        alert('In a full implementation, this would open Stripe Customer Portal for payment method updates.');
+    document.getElementById('updatePayment').addEventListener('click', async function () {
+        await redirectToCustomerPortal();
     });
 
     // View invoices handler
-    document.getElementById('viewInvoices').addEventListener('click', function() {
-        alert('Invoice history would be displayed here or link to Stripe Customer Portal.');
+    document.getElementById('viewInvoices').addEventListener('click', async function () {
+        await redirectToCustomerPortal();
     });
 
     // Refresh subscription status
-    document.getElementById('refreshStatus')?.addEventListener('click', async function() {
+    document.getElementById('refreshStatus')?.addEventListener('click', async function () {
         await loadAccountInfo();
         showToast('Subscription status refreshed!', 'success');
     });
 
     // Cancel subscription handler
-    document.getElementById('cancelSubscription').addEventListener('click', async function() {
-        if (!confirm('Are you sure you want to cancel your subscription? You will lose access to Audio Transcriber Pro at the end of your billing period.')) {
+    document.getElementById('cancelSubscription').addEventListener('click', async function () {
+        if (!confirm('Are you sure you want to cancel your subscription? You will lose access to Resonote at the end of your billing period.')) {
             return;
         }
 
@@ -36,7 +36,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             const headers = {
                 'Content-Type': 'application/json'
             };
-            
+
             if (authToken) {
                 headers['Authorization'] = `Bearer ${authToken}`;
             }
@@ -67,7 +67,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             const headers = {
                 'Content-Type': 'application/json'
             };
-            
+
             if (authToken) {
                 headers['Authorization'] = `Bearer ${authToken}`;
             }
@@ -89,7 +89,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 const planName = user.plan.charAt(0).toUpperCase() + user.plan.slice(1);
                 const status = user.status;
                 const statusDisplay = status.charAt(0).toUpperCase() + status.slice(1);
-                
+
                 accountInfo.innerHTML = `
                     <div class="account-details">
                         <div class="detail-card">
@@ -141,7 +141,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                                 <i class="fas fa-info-circle"></i> Subscription Benefits
                             </h4>
                             <ul style="color: var(--gray); line-height: 1.6; padding-left: 20px;">
-                                <li>Full access to Audio Transcriber Pro desktop application</li>
+                                <li>Full access to Resonote desktop application</li>
                                 <li>Regular updates and new features</li>
                                 <li>Priority customer support</li>
                                 <li>Cloud sync and backup</li>
@@ -150,16 +150,16 @@ document.addEventListener('DOMContentLoaded', async function() {
                         </div>
                     </div>
                 `;
-                
+
                 accountActions.style.display = 'block';
-                
+
             } else {
                 accountInfo.innerHTML = `
                     <div class="no-subscription">
                         <i class="fas fa-exclamation-triangle"></i>
                         <h3 style="margin-bottom: 12px; color: var(--dark);">No Active Subscription</h3>
                         <p style="color: var(--gray); margin-bottom: 24px; max-width: 400px; margin-left: auto; margin-right: auto;">
-                            You don't have an active subscription. Subscribe to get full access to Audio Transcriber Pro features.
+                            You don't have an active subscription. Subscribe to get full access to Resonote features.
                         </p>
                         <a href="index.html" class="btn btn-primary">
                             <i class="fas fa-crown"></i> Subscribe Now
@@ -209,7 +209,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             transition: transform 0.3s ease;
             max-width: 400px;
         `;
-        
+
         toast.innerHTML = `
             <div style="display: flex; align-items: flex-start; gap: 12px;">
                 <i class="fas fa-${type === 'success' ? 'check' : type === 'error' ? 'exclamation' : 'info'}-circle" 
@@ -217,13 +217,13 @@ document.addEventListener('DOMContentLoaded', async function() {
                 <span style="flex: 1;">${message}</span>
             </div>
         `;
-        
+
         document.body.appendChild(toast);
-        
+
         setTimeout(() => {
             toast.style.transform = 'translateX(0)';
         }, 100);
-        
+
         setTimeout(() => {
             toast.style.transform = 'translateX(400px)';
             setTimeout(() => {
@@ -232,5 +232,33 @@ document.addEventListener('DOMContentLoaded', async function() {
                 }
             }, 300);
         }, 5000);
+    }
+
+    async function redirectToCustomerPortal() {
+        try {
+            const headers = {
+                'Content-Type': 'application/json'
+            };
+
+            if (authToken) {
+                headers['Authorization'] = `Bearer ${authToken}`;
+            }
+
+            const response = await fetch('/api/create-portal-session', {
+                method: 'POST',
+                headers: headers
+            });
+
+            const result = await response.json();
+
+            if (response.ok && result.url) {
+                window.location.href = result.url;
+            } else {
+                throw new Error(result.error || 'Failed to create portal session');
+            }
+        } catch (error) {
+            console.error('Portal redirect error:', error);
+            showToast('Failed to redirect to billing portal: ' + error.message, 'error');
+        }
     }
 });

@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Verify Email - Audio Transcriber Pro</title>
+    <title>Verify Email - Resonote</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -17,7 +18,7 @@
             box-shadow: var(--shadow-lg);
             text-align: center;
         }
-        
+
         .verification-icon {
             width: 80px;
             height: 80px;
@@ -28,37 +29,37 @@
             justify-content: center;
             margin: 0 auto 24px;
         }
-        
+
         .verification-icon i {
             font-size: 32px;
             color: var(--primary);
         }
-        
+
         .verification-status {
             padding: 16px;
             border-radius: var(--border-radius);
             margin: 20px 0;
             font-weight: 500;
         }
-        
+
         .status-success {
             background: var(--secondary-light);
             color: var(--secondary-dark);
             border: 1px solid var(--secondary);
         }
-        
+
         .status-error {
             background: var(--danger-light);
             color: var(--danger);
             border: 1px solid var(--danger);
         }
-        
+
         .status-loading {
             background: var(--warning-light);
             color: var(--warning);
             border: 1px solid var(--warning);
         }
-        
+
         .resend-link {
             margin-top: 20px;
             color: var(--primary);
@@ -66,11 +67,11 @@
             font-size: 14px;
             cursor: pointer;
         }
-        
+
         .resend-link:hover {
             text-decoration: underline;
         }
-        
+
         .resend-message {
             margin-top: 12px;
             font-size: 14px;
@@ -78,13 +79,13 @@
         }
     </style>
 </head>
+
 <body>
     <header>
         <div class="container">
             <nav class="navbar">
                 <a href="index.html" class="logo">
-                    <i class="fas fa-headphones logo-icon"></i>
-                    AudioTranscriber Pro
+                    <img src="icons/resonote1080x308.png" alt="Resonote Logo" style="height: 40px; width: auto;">
                 </a>
                 <div class="nav-buttons">
                     <a href="index.html" class="btn btn-outline">
@@ -100,14 +101,14 @@
             <div class="verification-icon">
                 <i class="fas fa-envelope"></i>
             </div>
-            
+
             <h1>Verify Your Email</h1>
             <p>We're verifying your email address. This may take a moment...</p>
-            
+
             <div id="verificationStatus" class="verification-status status-loading">
                 <i class="fas fa-spinner fa-spin"></i> Verifying your email...
             </div>
-            
+
             <div id="successContent" style="display: none;">
                 <div class="verification-status status-success">
                     <i class="fas fa-check-circle"></i> Email verified successfully!
@@ -117,32 +118,32 @@
                     <i class="fas fa-sign-in-alt"></i> Sign In Now
                 </a>
             </div>
-            
+
             <div id="errorContent" style="display: none;">
                 <div class="verification-status status-error">
                     <i class="fas fa-exclamation-circle"></i> Verification Failed
                 </div>
                 <p id="errorMessage">The verification link is invalid or has expired.</p>
-                
+
                 <div style="margin-top: 24px;">
                     <a href="#" id="resendVerification" class="resend-link">
                         <i class="fas fa-redo"></i> Resend verification email
                     </a>
                     <div id="resendMessage" class="resend-message" style="display: none;"></div>
                 </div>
-                
+
                 <div style="margin-top: 20px;">
                     <a href="index.html" class="btn btn-outline">
                         <i class="fas fa-home"></i> Back to Home
                     </a>
                 </div>
             </div>
-            
+
             <div id="resendForm" style="display: none; margin-top: 24px;">
                 <h3>Resend Verification Email</h3>
                 <div class="form-group" style="margin-bottom: 16px;">
-                    <input type="email" id="resendEmail" placeholder="Enter your email address" 
-                           style="width: 100%; padding: 12px; border: 1px solid var(--gray-light); border-radius: 8px;">
+                    <input type="email" id="resendEmail" placeholder="Enter your email address"
+                        style="width: 100%; padding: 12px; border: 1px solid var(--gray-light); border-radius: 8px;">
                 </div>
                 <button id="submitResend" class="btn btn-primary" style="width: 100%;">
                     <i class="fas fa-paper-plane"></i> Resend Verification
@@ -153,7 +154,7 @@
     </main>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             const urlParams = new URLSearchParams(window.location.search);
             const token = urlParams.get('token');
             const verificationStatus = document.getElementById('verificationStatus');
@@ -175,15 +176,15 @@
             }
 
             // Resend verification link
-            resendVerification.addEventListener('click', function(e) {
+            resendVerification.addEventListener('click', function (e) {
                 e.preventDefault();
                 resendForm.style.display = 'block';
                 resendVerification.style.display = 'none';
             });
 
-            submitResend.addEventListener('click', function() {
+            submitResend.addEventListener('click', function () {
                 const email = resendEmail.value.trim();
-                
+
                 if (!email) {
                     resendResult.innerHTML = '<div style="color: var(--danger);">Please enter your email address</div>';
                     return;
@@ -199,25 +200,25 @@
                     },
                     body: JSON.stringify({ email })
                 })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        resendResult.innerHTML = '<div style="color: var(--success);">Verification email sent! Please check your inbox.</div>';
-                        resendForm.style.display = 'none';
-                        resendMessage.style.display = 'block';
-                        resendMessage.innerHTML = 'Verification email sent! Please check your inbox.';
-                        resendMessage.style.color = 'var(--success)';
-                    } else {
-                        resendResult.innerHTML = `<div style="color: var(--danger);">${data.error || 'Failed to send verification email'}</div>`;
-                    }
-                })
-                .catch(error => {
-                    resendResult.innerHTML = '<div style="color: var(--danger);">Network error. Please try again.</div>';
-                })
-                .finally(() => {
-                    submitResend.disabled = false;
-                    submitResend.innerHTML = '<i class="fas fa-paper-plane"></i> Resend Verification';
-                });
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            resendResult.innerHTML = '<div style="color: var(--success);">Verification email sent! Please check your inbox.</div>';
+                            resendForm.style.display = 'none';
+                            resendMessage.style.display = 'block';
+                            resendMessage.innerHTML = 'Verification email sent! Please check your inbox.';
+                            resendMessage.style.color = 'var(--success)';
+                        } else {
+                            resendResult.innerHTML = `<div style="color: var(--danger);">${data.error || 'Failed to send verification email'}</div>`;
+                        }
+                    })
+                    .catch(error => {
+                        resendResult.innerHTML = '<div style="color: var(--danger);">Network error. Please try again.</div>';
+                    })
+                    .finally(() => {
+                        submitResend.disabled = false;
+                        submitResend.innerHTML = '<i class="fas fa-paper-plane"></i> Resend Verification';
+                    });
             });
 
             function verifyEmail(token) {
@@ -228,18 +229,18 @@
                     },
                     body: JSON.stringify({ token })
                 })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        verificationStatus.style.display = 'none';
-                        successContent.style.display = 'block';
-                    } else {
-                        showError(data.error || 'Verification failed');
-                    }
-                })
-                .catch(error => {
-                    showError('Network error. Please try again.');
-                });
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            verificationStatus.style.display = 'none';
+                            successContent.style.display = 'block';
+                        } else {
+                            showError(data.error || 'Verification failed');
+                        }
+                    })
+                    .catch(error => {
+                        showError('Network error. Please try again.');
+                    });
             }
 
             function showError(message) {
@@ -250,4 +251,5 @@
         });
     </script>
 </body>
+
 </html>

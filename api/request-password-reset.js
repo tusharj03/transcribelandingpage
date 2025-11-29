@@ -45,21 +45,21 @@ module.exports = async (req, res) => {
 
   try {
     const { email } = req.body;
-    
+
     if (!email) {
       return res.status(400).json({ error: 'Email required' });
     }
 
     const db = await connectToDatabase();
     const usersCollection = db.collection('users');
-    
+
     const user = await usersCollection.findOne({ email });
-    
+
     if (!user) {
       // Don't reveal whether email exists for security
-      return res.json({ 
+      return res.json({
         success: true,
-        message: 'If an account with that email exists, a password reset link has been sent.' 
+        message: 'If an account with that email exists, a password reset link has been sent.'
       });
     }
 
@@ -73,26 +73,26 @@ module.exports = async (req, res) => {
     // Store reset token in database
     await usersCollection.updateOne(
       { email },
-      { 
-        $set: { 
+      {
+        $set: {
           resetToken,
           resetTokenExpires: new Date(Date.now() + 3600000) // 1 hour
-        } 
+        }
       }
     );
 
     // Send reset email
     const resetUrl = `https://audiotranscriberlanding.vercel.app/reset-password.html?token=${resetToken}`;
-    
+
     try {
       await emailTransporter.sendMail({
         from: process.env.SMTP_FROM || 'noreply@audiotranscriberpro.com',
         to: email,
-        subject: 'Reset Your Password - Audio Transcriber Pro',
+        subject: 'Reset Your Password - Resonote',
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <h2 style="color: #6366f1;">Reset Your Password</h2>
-            <p>We received a request to reset your password for your Audio Transcriber Pro account.</p>
+            <p>We received a request to reset your password for your Resonote account.</p>
             <p>Click the button below to reset your password:</p>
             <div style="text-align: center; margin: 30px 0;">
               <a href="${resetUrl}" style="background-color: #6366f1; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">

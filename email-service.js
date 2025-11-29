@@ -56,12 +56,12 @@ class EmailService {
     }
 
     async sendVerificationEmail(email, token) {
-        const verificationUrl = `${process.env.BASE_URL || 'audiotranscriberlanding.vercel.app'}/verify-email.html?token=${token}`;
-        
+        const verificationUrl = `${process.env.BASE_URL || 'resonote.vercel.app'}/verify-email.html?token=${token}`;
+
         const mailOptions = {
             from: process.env.SMTP_FROM || 'tusharj2004@gmail.com',
             to: email,
-            subject: 'Verify Your Audio Transcriber Pro Account',
+            subject: 'Verify Your Resonote Account',
             html: this.getVerificationTemplate(verificationUrl)
         };
 
@@ -70,11 +70,11 @@ class EmailService {
 
     async sendPasswordResetEmail(email, token) {
         const resetUrl = `${process.env.BASE_URL || 'audiotranscriberlanding.vercel.app'}/reset-password.html?token=${token}`;
-        
+
         const mailOptions = {
             from: process.env.SMTP_FROM || 'tusharj2004@gmail.com',
             to: email,
-            subject: 'Reset Your Password - Audio Transcriber Pro',
+            subject: 'Reset Your Password - Resonote',
             html: this.getPasswordResetTemplate(resetUrl)
         };
 
@@ -120,11 +120,11 @@ class EmailService {
         <body>
             <div class="container">
                 <div class="header">
-                    <h1>Audio Transcriber Pro</h1>
+                    <h1>Resonote</h1>
                 </div>
                 <div class="content">
                     <h2>Verify Your Email Address</h2>
-                    <p>Thank you for creating an account with Audio Transcriber Pro!</p>
+                    <p>Thank you for creating an account with Resonote!</p>
                     <p>Please click the button below to verify your email address:</p>
                     <div style="text-align: center; margin: 30px 0;">
                         <a href="${verificationUrl}" class="button">Verify Email Address</a>
@@ -137,7 +137,7 @@ class EmailService {
                     <p>If you didn't create an account, please ignore this email.</p>
                 </div>
                 <div class="footer">
-                    <p>&copy; 2024 Audio Transcriber Pro. All rights reserved.</p>
+                    <p>&copy; 2024 Resonote. All rights reserved.</p>
                 </div>
             </div>
         </body>
@@ -162,11 +162,11 @@ class EmailService {
         <body>
             <div class="container">
                 <div class="header">
-                    <h1>Audio Transcriber Pro</h1>
+                    <h1>Resonote</h1>
                 </div>
                 <div class="content">
                     <h2>Reset Your Password</h2>
-                    <p>We received a request to reset your password for your Audio Transcriber Pro account.</p>
+                    <p>We received a request to reset your password for your Resonote account.</p>
                     <p>Click the button below to reset your password:</p>
                     <div style="text-align: center; margin: 30px 0;">
                         <a href="${resetUrl}" class="button">Reset Password</a>
@@ -179,7 +179,7 @@ class EmailService {
                     <p>If you didn't request a password reset, please ignore this email.</p>
                 </div>
                 <div class="footer">
-                    <p>&copy; 2024 Audio Transcriber Pro. All rights reserved.</p>
+                    <p>&copy; 2024 Resonote. All rights reserved.</p>
                 </div>
             </div>
         </body>
