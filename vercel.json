@@ -35,5 +35,55 @@
       "src": "/(.*)",
       "dest": "/$1"
     }
+  ],
+  "rewrites": [
+    {
+      "source": "/api/login",
+      "destination": "/api/auth.js?action=login"
+    },
+    {
+      "source": "/api/register",
+      "destination": "/api/auth.js?action=register"
+    },
+    {
+      "source": "/api/dmg-login",
+      "destination": "/api/auth.js?action=dmg-login"
+    },
+    {
+      "source": "/api/user-profile",
+      "destination": "/api/auth.js?action=user-profile"
+    },
+    {
+      "source": "/api/developer-bypass",
+      "destination": "/api/auth.js?action=developer-bypass"
+    },
+    {
+      "source": "/api/create-subscription",
+      "destination": "/api/subscription.js?action=create"
+    },
+    {
+      "source": "/api/cancel-subscription",
+      "destination": "/api/subscription.js?action=cancel"
+    },
+    {
+      "source": "/api/check-subscription",
+      "destination": "/api/subscription.js?action=check"
+    },
+    {
+      "source": "/api/verify-subscription",
+      "destination": "/api/subscription.js?action=verify"
+    },
+    {
+      "source": "/api/create-portal-session",
+      "destination": "/api/subscription.js?action=portal"
+    },
+    {
+      "source": "/api/request-password-reset",
+      "destination": "/api/password.js?action=request-reset"
+    },
+    {
+      "source": "/api/reset-password",
+      "destination": "/api/password.js?action=reset"
+    }
   ]
 }
