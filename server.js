@@ -796,30 +796,6 @@ app.post('/api/create-subscription', async (req, res) => {
   }
 });
 
-// Create Customer Portal Session
-app.post('/api/create-portal-session', authenticateToken, async (req, res) => {
-  try {
-    const user = await usersCollection.findOne({ email: req.user.email });
-
-    if (!user || !user.stripeCustomerId) {
-      return res.status(400).json({ error: 'No billing account found' });
-    }
-
-    // This is the URL to which the customer will be redirected after they are
-    // done managing their billing with the portal.
-    const returnUrl = `${process.env.BASE_URL || 'http://localhost:3000'}/account.html`;
-
-    const portalSession = await stripe.billingPortal.sessions.create({
-      customer: user.stripeCustomerId,
-      return_url: returnUrl,
-    });
-
-    res.json({ url: portalSession.url });
-  } catch (error) {
-    console.error('Portal session error:', error);
-    res.status(500).json({ error: 'Failed to create portal session' });
-  }
-});
 
 // Check user subscription status (for website)
 app.post('/api/check-subscription', async (req, res) => {
