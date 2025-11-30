@@ -73,7 +73,7 @@ document.addEventListener('DOMContentLoaded', async function () {
             }
 
             // Use the user profile endpoint instead of check-subscription
-            const response = await fetch('/api/user/profile', {
+            const response = await fetch('/api/user-profile', {
                 method: 'GET',
                 headers: headers
             });
