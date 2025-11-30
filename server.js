@@ -868,7 +868,7 @@ app.post('/api/cancel-subscription', authenticateToken, async (req, res) => {
 });
 
 // Get user profile
-app.get('/api/user/profile', authenticateToken, async (req, res) => {
+app.get('/api/user-profile', authenticateToken, async (req, res) => {
   const userEmail = req.user.email;
 
   try {
