@@ -51,9 +51,15 @@
                 <div style="position: relative;">
                     <i class="fas fa-search"
                         style="position: absolute; left: 20px; top: 50%; transform: translateY(-50%); color: var(--gray);"></i>
-                    <input type="text" placeholder="Search for help..."
+                    <input type="text" id="searchInput"
+                        placeholder="Search for help (e.g., 'recording', 'export', 'billing')..."
                         style="width: 100%; padding: 16px 16px 16px 50px; border: 1px solid #e2e8f0; border-radius: 30px; font-size: 16px; box-shadow: var(--shadow);">
                 </div>
+            </div>
+
+            <div id="searchResults" style="max-width: 800px; margin: 0 auto 40px; display: none;">
+                <h3 style="margin-bottom: 20px; color: var(--dark);">Search Results</h3>
+                <div id="resultsList" style="display: grid; gap: 15px;"></div>
             </div>
 
             <div
@@ -67,7 +73,8 @@
                     <h3 style="margin-bottom: 10px; color: var(--dark);">Knowledge Base</h3>
                     <p style="color: var(--gray); margin-bottom: 20px;">Browse articles and tutorials to find answers.
                     </p>
-                    <a href="#" style="color: var(--primary); font-weight: 600;">Visit Knowledge Base</a>
+                    <a href="documentation.html" style="color: var(--primary); font-weight: 600;">Visit Knowledge
+                        Base</a>
                 </div>
 
                 <div class="support-card"
@@ -78,8 +85,7 @@
                     </div>
                     <h3 style="margin-bottom: 10px; color: var(--dark);">Email Support</h3>
                     <p style="color: var(--gray); margin-bottom: 20px;">Get in touch with our support team directly.</p>
-                    <a href="mailto:support@resonote.com" style="color: var(--primary); font-weight: 600;">Contact
-                        Us</a>
+                    <a href="contact.html" style="color: var(--primary); font-weight: 600;">Contact Us</a>
                 </div>
 
                 <div class="support-card"
@@ -91,7 +97,8 @@
                     <h3 style="margin-bottom: 10px; color: var(--dark);">Community</h3>
                     <p style="color: var(--gray); margin-bottom: 20px;">Join the discussion with other Resonote users.
                     </p>
-                    <a href="#" style="color: var(--primary); font-weight: 600;">Join Community</a>
+                    <a href="#" onclick="alert('Community forum coming soon!')"
+                        style="color: var(--primary); font-weight: 600;">Join Community</a>
                 </div>
             </div>
         </div>
@@ -144,6 +151,46 @@
             </div>
         </div>
     </footer>
+
+    <script>
+        const searchInput = document.getElementById('searchInput');
+        const searchResults = document.getElementById('searchResults');
+        const resultsList = document.getElementById('resultsList');
+
+        const articles = [
+            { title: 'How to start recording', url: 'documentation.html#live-transcription', desc: 'Learn how to use the microphone or system audio.' },
+            { title: 'Background recording', url: 'documentation.html#background-recording', desc: 'Record audio from a tab while working elsewhere.' },
+            { title: 'AI Insights', url: 'documentation.html#ai-insights', desc: 'Get summaries and action items from your transcripts.' },
+            { title: 'Exporting transcripts', url: 'documentation.html#history', desc: 'Download your transcripts as text files.' },
+            { title: 'Billing and Subscription', url: 'index.html#pricing', desc: 'Manage your plan and payment methods.' },
+            { title: 'Contact Support', url: 'contact.html', desc: 'Get in touch with our team.' }
+        ];
+
+        searchInput.addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase();
+            if (query.length < 2) {
+                searchResults.style.display = 'none';
+                return;
+            }
+
+            const filtered = articles.filter(article =>
+                article.title.toLowerCase().includes(query) ||
+                article.desc.toLowerCase().includes(query)
+            );
+
+            if (filtered.length > 0) {
+                resultsList.innerHTML = filtered.map(article => `
+                    <a href="${article.url}" style="display: block; padding: 15px; background: white; border-radius: 8px; text-decoration: none; box-shadow: var(--shadow); border: 1px solid #e2e8f0;">
+                        <div style="color: var(--primary); font-weight: 600; margin-bottom: 4px;">${article.title}</div>
+                        <div style="color: var(--gray); font-size: 14px;">${article.desc}</div>
+                    </a>
+                `).join('');
+                searchResults.style.display = 'block';
+            } else {
+                searchResults.style.display = 'none';
+            }
+        });
+    </script>
 </body>
 
 </html>
