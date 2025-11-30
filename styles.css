@@ -100,6 +100,12 @@ header {
     font-size: 28px;
 }
 
+.nav-menu {
+    display: flex;
+    align-items: center;
+    gap: 32px;
+}
+
 .nav-links {
     display: flex;
     gap: 32px;
@@ -135,6 +141,13 @@ header {
 .nav-buttons {
     display: flex;
     gap: 16px;
+}
+
+.mobile-menu-btn {
+    display: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: var(--dark);
 }
 
 .btn {
@@ -234,7 +247,7 @@ header {
     right: 0;
     background: white;
     min-width: 200px;
-    box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
     border-radius: 8px;
     z-index: 1000;
     margin-top: 8px;
@@ -363,8 +376,15 @@ header {
 }
 
 @keyframes float {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-10px); }
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-10px);
+    }
 }
 
 /* Features Section */
@@ -1308,8 +1328,13 @@ footer {
 }
 
 @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
 }
 
 /* Responsive Styles */
@@ -1339,12 +1364,78 @@ footer {
 
 @media (max-width: 768px) {
     .navbar {
+        padding: 16px 0;
+    }
+
+    .mobile-menu-btn {
+        display: block;
+        z-index: 1001;
+    }
+
+    .nav-menu {
+        position: fixed;
+        top: 0;
+        right: -100%;
+        width: 80%;
+        max-width: 300px;
+        height: 100vh;
+        background: white;
         flex-direction: column;
-        gap: 20px;
+        align-items: flex-start;
+        padding: 80px 24px 24px;
+        box-shadow: -5px 0 15px rgba(0, 0, 0, 0.1);
+        transition: right 0.3s ease;
+        z-index: 1000;
+        gap: 24px;
+        overflow-y: auto;
+    }
+
+    .nav-menu.active {
+        right: 0;
     }
 
     .nav-links {
-        gap: 20px;
+        flex-direction: column;
+        width: 100%;
+        gap: 16px;
+    }
+
+    .nav-links a {
+        display: block;
+        padding: 12px 0;
+        border-bottom: 1px solid var(--gray-light);
+        width: 100%;
+    }
+
+    .nav-buttons {
+        flex-direction: column;
+        width: 100%;
+        gap: 12px;
+        margin-top: 12px;
+    }
+
+    .nav-buttons .btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    /* Overlay when menu is open */
+    .menu-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 999;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s ease;
+    }
+
+    .menu-overlay.active {
+        opacity: 1;
+        visibility: visible;
     }
 
     .hero-text h1 {
@@ -1363,7 +1454,8 @@ footer {
         transform: translateY(-10px);
     }
 
-    .cta-buttons, .modal-buttons {
+    .cta-buttons,
+    .modal-buttons {
         flex-direction: column;
         align-items: center;
     }
@@ -1380,29 +1472,31 @@ footer {
     .download-options {
         grid-template-columns: 1fr;
     }
-    
+
     .hero {
         padding: 140px 0 80px;
     }
-    
+
     .section {
         padding: 60px 0;
     }
-    
-    .features-grid, .pricing-grid, .testimonials-grid {
+
+    .features-grid,
+    .pricing-grid,
+    .testimonials-grid {
         grid-template-columns: 1fr;
     }
-    
+
     .floating-card {
         display: none;
     }
-    
+
     .payment-card,
     .success-card,
     .download-card {
         padding: 30px 20px;
     }
-    
+
     .download-container,
     .success-container {
         margin: 100px auto 40px;
@@ -1417,20 +1511,20 @@ footer {
     .hero-buttons {
         flex-direction: column;
     }
-    
+
     .btn {
         padding: 10px 20px;
         font-size: 14px;
     }
-    
+
     .modal {
         padding: 30px 20px;
     }
-    
+
     .modal-buttons {
         flex-direction: column;
     }
-    
+
     .toast {
         left: 20px;
         right: 20px;
@@ -1444,8 +1538,15 @@ footer {
 }
 
 @keyframes pulse {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.02); }
+
+    0%,
+    100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.02);
+    }
 }
 
 /* Payment message styles */

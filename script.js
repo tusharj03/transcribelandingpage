@@ -1,8 +1,50 @@
 // Main landing page JavaScript
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
+    // Mobile Menu Toggle
+    const mobileMenuBtn = document.querySelector('.mobile-menu-btn');
+    const navMenu = document.querySelector('.nav-menu');
+    const body = document.body;
+
+    // Create overlay element
+    const overlay = document.createElement('div');
+    overlay.className = 'menu-overlay';
+    body.appendChild(overlay);
+
+    function toggleMenu() {
+        navMenu.classList.toggle('active');
+        overlay.classList.toggle('active');
+        body.style.overflow = navMenu.classList.contains('active') ? 'hidden' : '';
+
+        // Change icon
+        const icon = mobileMenuBtn.querySelector('i');
+        if (navMenu.classList.contains('active')) {
+            icon.classList.remove('fa-bars');
+            icon.classList.add('fa-times');
+        } else {
+            icon.classList.remove('fa-times');
+            icon.classList.add('fa-bars');
+        }
+    }
+
+    if (mobileMenuBtn) {
+        mobileMenuBtn.addEventListener('click', toggleMenu);
+    }
+
+    // Close menu when clicking overlay
+    overlay.addEventListener('click', toggleMenu);
+
+    // Close menu when clicking a link
+    const navLinks = document.querySelectorAll('.nav-links a');
+    navLinks.forEach(link => {
+        link.addEventListener('click', () => {
+            if (navMenu.classList.contains('active')) {
+                toggleMenu();
+            }
+        });
+    });
     // Check if user is already logged in
     checkExistingSession();
-    
+
     // FAQ Toggle
     document.querySelectorAll('.faq-question').forEach(question => {
         question.addEventListener('click', () => {
@@ -21,7 +63,7 @@ document.addEventListener('DOMContentLoaded', function() {
     downloadButtons.forEach(button => {
         button.addEventListener('click', () => {
             const userEmail = sessionStorage.getItem('userEmail');
-            
+
             if (!userEmail) {
                 // Show login modal first
                 document.getElementById('loginModal').classList.add('active');
@@ -53,11 +95,11 @@ document.addEventListener('DOMContentLoaded', function() {
         button.addEventListener('click', () => {
             const plan = button.getAttribute('data-plan');
             const price = button.getAttribute('data-price');
-            
+
             // Store plan selection in sessionStorage
             sessionStorage.setItem('selectedPlan', plan);
             sessionStorage.setItem('selectedPrice', price);
-            
+
             // Redirect to payment page
             window.location.href = 'payment.html';
         });
@@ -80,10 +122,10 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
         anchor.addEventListener('click', function (e) {
             e.preventDefault();
-            
+
             const targetId = this.getAttribute('href');
             if (targetId === '#') return;
-            
+
             const targetElement = document.querySelector(targetId);
             if (targetElement) {
                 window.scrollTo({
@@ -118,7 +160,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Get Started button functionality
     document.getElementById('getStartedBtn').addEventListener('click', () => {
         const userEmail = sessionStorage.getItem('userEmail');
-        
+
         if (!userEmail) {
             document.getElementById('registerModal').classList.add('active');
             document.body.style.overflow = 'hidden';
@@ -130,10 +172,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Login Modal Functionality
     setupLoginModal();
-    
+
     // Registration Modal Functionality
     setupRegistrationModal();
-    
+
     // User dropdown functionality
     setupUserDropdown();
 });
@@ -142,19 +184,19 @@ document.addEventListener('DOMContentLoaded', function() {
 function checkExistingSession() {
     const userEmail = sessionStorage.getItem('userEmail');
     const userPlan = sessionStorage.getItem('userPlan');
-    
+
     if (userEmail) {
         // User is logged in, update UI
         document.getElementById('userMenu').style.display = 'block';
         document.getElementById('loginBtn').style.display = 'none';
         document.getElementById('getStartedBtn').style.display = 'none';
         document.getElementById('userEmail').textContent = userEmail;
-        
+
         // Show user status if they have a plan
         if (userPlan && userPlan !== 'inactive') {
             document.getElementById('userStatus').style.display = 'block';
             document.getElementById('currentPlan').textContent = userPlan;
-            
+
             // Show current subscription info
             document.getElementById('currentSubscription').style.display = 'block';
             document.getElementById('activePlanName').textContent = userPlan.charAt(0).toUpperCase() + userPlan.slice(1);
@@ -186,15 +228,15 @@ function setupLoginModal() {
     });
 
     // Login form submission
-    submitLogin.addEventListener('click', async function() {
+    submitLogin.addEventListener('click', async function () {
         const email = loginEmail.value.trim();
         const password = loginPassword.value;
-        
+
         if (!email || !password) {
             loginMessage.textContent = 'Please enter both email and password';
             return;
         }
-        
+
         try {
             const response = await fetch('/api/login', {
                 method: 'POST',
@@ -203,35 +245,35 @@ function setupLoginModal() {
                 },
                 body: JSON.stringify({ email, password })
             });
-            
+
             const result = await response.json();
-            
+
             if (result.success) {
                 // Store user session
                 sessionStorage.setItem('userEmail', result.user.email);
                 sessionStorage.setItem('authToken', result.token);
                 sessionStorage.setItem('userPlan', result.user.plan);
                 sessionStorage.setItem('userStatus', result.user.status);
-                
+
                 // Update UI
                 document.getElementById('userMenu').style.display = 'block';
                 document.getElementById('loginBtn').style.display = 'none';
                 document.getElementById('getStartedBtn').style.display = 'none';
                 document.getElementById('userEmail').textContent = result.user.email;
-                
+
                 // Update user status section
                 if (result.user.plan && result.user.plan !== 'inactive') {
                     document.getElementById('userStatus').style.display = 'block';
                     document.getElementById('currentPlan').textContent = result.user.plan;
-                    
+
                     document.getElementById('currentSubscription').style.display = 'block';
                     document.getElementById('activePlanName').textContent = result.user.plan.charAt(0).toUpperCase() + result.user.plan.slice(1);
                 }
-                
+
                 // Close modal
                 loginModal.classList.remove('active');
                 document.body.style.overflow = 'auto';
-                
+
                 showToast('Successfully signed in!', 'success');
             } else {
                 loginMessage.textContent = result.error || 'Login failed';
@@ -275,26 +317,26 @@ function setupRegistrationModal() {
     });
 
     // Registration form submission
-    submitRegister.addEventListener('click', async function() {
+    submitRegister.addEventListener('click', async function () {
         const email = registerEmail.value.trim();
         const password = registerPassword.value;
         const confirm = confirmPassword.value;
-        
+
         if (!email || !password) {
             registerMessage.textContent = 'Please enter both email and password';
             return;
         }
-        
+
         if (password !== confirm) {
             registerMessage.textContent = 'Passwords do not match';
             return;
         }
-        
+
         if (password.length < 8) {
             registerMessage.textContent = 'Password must be at least 8 characters long';
             return;
         }
-        
+
         try {
             const response = await fetch('/api/register', {
                 method: 'POST',
@@ -303,13 +345,13 @@ function setupRegistrationModal() {
                 },
                 body: JSON.stringify({ email, password })
             });
-            
+
             const result = await response.json();
-            
+
             if (result.success) {
                 registerMessage.style.color = '#10b981';
                 registerMessage.textContent = 'Account created! Please check your email for verification.';
-                
+
                 // Auto-login after successful registration
                 setTimeout(async () => {
                     try {
@@ -320,25 +362,25 @@ function setupRegistrationModal() {
                             },
                             body: JSON.stringify({ email, password })
                         });
-                        
+
                         const loginResult = await loginResponse.json();
-                        
+
                         if (loginResult.success) {
                             sessionStorage.setItem('userEmail', loginResult.user.email);
                             sessionStorage.setItem('authToken', loginResult.token);
                             sessionStorage.setItem('userPlan', loginResult.user.plan);
                             sessionStorage.setItem('userStatus', loginResult.user.status);
-                            
+
                             document.getElementById('userMenu').style.display = 'block';
                             document.getElementById('loginBtn').style.display = 'none';
                             document.getElementById('getStartedBtn').style.display = 'none';
                             document.getElementById('userEmail').textContent = loginResult.user.email;
-                            
+
                             registerModal.classList.remove('active');
                             document.body.style.overflow = 'auto';
-                            
+
                             showToast('Account created and signed in!', 'success');
-                            
+
                             // Show paywall modal to encourage subscription
                             setTimeout(() => {
                                 document.getElementById('paywallModal').classList.add('active');
@@ -350,7 +392,7 @@ function setupRegistrationModal() {
                         registerMessage.textContent = 'Account created but auto-login failed. Please sign in manually.';
                     }
                 }, 2000);
-                
+
             } else {
                 registerMessage.textContent = result.error || 'Registration failed';
             }
@@ -389,20 +431,20 @@ function setupUserDropdown() {
         // Logout functionality
         logoutLink.addEventListener('click', (e) => {
             e.preventDefault();
-            
+
             // Clear session storage
             sessionStorage.removeItem('userEmail');
             sessionStorage.removeItem('authToken');
             sessionStorage.removeItem('userPlan');
             sessionStorage.removeItem('userStatus');
-            
+
             // Update UI
             document.getElementById('userMenu').style.display = 'none';
             document.getElementById('loginBtn').style.display = 'inline-block';
             document.getElementById('getStartedBtn').style.display = 'inline-block';
             document.getElementById('userStatus').style.display = 'none';
             document.getElementById('currentSubscription').style.display = 'none';
-            
+
             showToast('Successfully logged out', 'success');
         });
     }
@@ -430,22 +472,22 @@ function showToast(message, type = 'info') {
         align-items: center;
         gap: 12px;
     `;
-    
+
     const icon = type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle';
     const iconColor = type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#6366f1';
-    
+
     toast.innerHTML = `
         <i class="fas fa-${icon}" style="color: ${iconColor};"></i>
         <span>${message}</span>
     `;
-    
+
     document.body.appendChild(toast);
-    
+
     // Animate in
     setTimeout(() => {
         toast.style.transform = 'translateX(0)';
     }, 100);
-    
+
     // Animate out after 5 seconds
     setTimeout(() => {
         toast.style.transform = 'translateX(400px)';
