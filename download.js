@@ -1,16 +1,14 @@
-document.addEventListener('DOMContentLoaded', async function() {
+document.addEventListener('DOMContentLoaded', async function () {
     // Check payment and subscription
-    const paymentSuccess = sessionStorage.getItem('paymentSuccess');
+    // Check payment and subscription
+    // const paymentSuccess = sessionStorage.getItem('paymentSuccess');
     const userEmail = sessionStorage.getItem('userEmail');
-    
-    if (!paymentSuccess || !userEmail) {
-        alert('❌ Please complete payment first');
+
+    if (!userEmail) {
+        alert('Please log in first');
         window.location.href = 'index.html';
         return;
     }
-
-    // Verify subscription status
-    await verifySubscription();
 
     const downloadOptions = document.querySelectorAll('.download-option');
     const downloadInstructions = document.getElementById('downloadInstructions');
@@ -19,6 +17,9 @@ document.addEventListener('DOMContentLoaded', async function() {
     const osName = document.getElementById('osName');
     const subscriptionInfo = document.getElementById('subscriptionInfo');
     const subscriptionText = document.getElementById('subscriptionText');
+
+    // Verify subscription status
+    await verifySubscription();
 
     const instructionSections = {
         windows: document.getElementById('windowsInstructions'),
@@ -29,7 +30,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Github download URLs
     const downloadUrls = {
         windows: 'https://github.com/tusharj03/transcribelandingpage/releases/download/AudioTranscribe/AudioTranscriberPro-Windows.zip',
-        mac: 'https://github.com/tusharj03/transcribelandingpage/releases/download/AudioTranscribe/AudioTranscriberPro-macOS.dmg',
+        mac: 'https://github.com/tusharj03/transcribelandingpage/releases/download/v1.0.3/resonote.zip',
         linux: 'https://github.com/tusharj03/transcribelandingpage/releases/download/AudioTranscribe/AudioTranscriberPro-Linux.deb'
     };
 
@@ -59,7 +60,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         osName.textContent = osDisplayName;
 
         const downloadUrl = downloadUrls[os];
-        const fileName = `AudioTranscriberPro-${osDisplayName}.${os === 'windows' ? 'zip' : os === 'mac' ? 'dmg' : 'deb'}`;
+        const fileName = `AudioTranscriberPro-${osDisplayName}.${os === 'windows' || os === 'mac' ? 'zip' : 'deb'}`;
 
         downloadLink.href = downloadUrl;
         downloadLink.setAttribute('download', fileName);
@@ -72,7 +73,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         } else {
             downloadLink.className = 'btn btn-outline';
             downloadLink.style.cursor = 'not-allowed';
-            downloadLink.onclick = function(e) {
+            downloadLink.onclick = function (e) {
                 e.preventDefault();
                 alert(`🚧 ${osDisplayName} version is coming soon!`);
             };
@@ -102,7 +103,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     });
 
     // Download tracking
-    downloadLink.addEventListener('click', function(e) {
+    downloadLink.addEventListener('click', function (e) {
         let os = osName.textContent.toLowerCase();
 
         // Normalize names
@@ -146,14 +147,14 @@ document.addEventListener('DOMContentLoaded', async function() {
     });
 
     // Check subscription button
-    document.getElementById('checkSubscription').addEventListener('click', async function() {
+    document.getElementById('checkSubscription').addEventListener('click', async function () {
         await verifySubscription();
     });
 
     async function verifySubscription() {
         const userEmail = sessionStorage.getItem('userEmail');
         const paymentMethod = sessionStorage.getItem('paymentMethod');
-        
+
         if (paymentMethod === 'developer') {
             // Developer bypass - always show as active
             subscriptionInfo.style.display = 'block';
@@ -179,13 +180,13 @@ document.addEventListener('DOMContentLoaded', async function() {
                 subscriptionInfo.style.display = 'block';
                 const planName = result.plan.charAt(0).toUpperCase() + result.plan.slice(1);
                 const status = result.status.charAt(0).toUpperCase() + result.status.slice(1);
-                
+
                 subscriptionText.innerHTML = `
                     Welcome, <strong>${userEmail}</strong>!<br>
                     Your <strong>${planName}</strong> plan is <span style="color: var(--secondary);">${status}</span>.
                     ${result.currentPeriodEnd ? `<br>Next billing: ${new Date(result.currentPeriodEnd * 1000).toLocaleDateString()}` : ''}
                 `;
-                
+
                 // Store subscription info
                 sessionStorage.setItem('subscriptionStatus', result.status);
                 sessionStorage.setItem('subscriptionPlan', result.plan);
