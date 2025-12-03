@@ -1,6 +1,7 @@
 const { MongoClient, ObjectId } = require('mongodb');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const emailService = require('../email-service');
 
 const MONGODB_URI = process.env.MONGODB_URI;
 const JWT_SECRET = process.env.JWT_SECRET || 'your-jwt-secret-key-change-in-production';
@@ -77,6 +78,11 @@ async function handleLogin(req, res, usersCollection) {
     const user = await usersCollection.findOne({ email });
     if (!user) return res.status(401).json({ error: 'Invalid email or password' });
 
+    // Check if email is verified
+    if (!user.emailVerified) {
+        return res.status(401).json({ error: 'Please verify your email address before logging in' });
+    }
+
     const validPassword = await bcrypt.compare(password, user.password);
     if (!validPassword) return res.status(401).json({ error: 'Invalid email or password' });
 
@@ -92,7 +98,8 @@ async function handleLogin(req, res, usersCollection) {
             plan: user.plan,
             status: user.status,
             subscribedAt: user.subscribedAt,
-            currentPeriodEnd: user.currentPeriodEnd
+            currentPeriodEnd: user.currentPeriodEnd,
+            emailVerified: user.emailVerified
         },
         token
     });
@@ -112,28 +119,40 @@ async function handleRegister(req, res, usersCollection) {
     if (existingUser) return res.status(400).json({ error: 'Email already registered' });
 
     const hashedPassword = await bcrypt.hash(password, 12);
+    const verificationToken = jwt.sign({ email }, JWT_SECRET, { expiresIn: '24h' });
+
     const user = {
         email,
         password: hashedPassword,
-        status: 'inactive',
-        plan: 'none',
+        status: 'unverified',
+        plan: 'inactive',
         createdAt: new Date(),
         lastLogin: null,
-        emailVerified: false
+        emailVerified: false,
+        verificationToken
     };
 
     const result = await usersCollection.insertOne(user);
-    const token = jwt.sign({ userId: result.insertedId, email: email }, JWT_SECRET, { expiresIn: '30d' });
 
+    // Send verification email
+    try {
+        await emailService.sendVerificationEmail(email, verificationToken);
+    } catch (emailError) {
+        console.error('Failed to send verification email:', emailError);
+        // Continue even if email fails, user can resend later
+    }
+
+    // We don't return a login token anymore, user must verify first
     res.json({
         success: true,
+        message: 'Registration successful! Please check your email for verification.',
         user: {
             id: result.insertedId,
             email: user.email,
             status: user.status,
-            plan: user.plan
-        },
-        token
+            plan: user.plan,
+            emailVerified: false
+        }
     });
 }
 
