@@ -226,6 +226,61 @@ app.post('/api/register', async (req, res) => {
 
 
 
+// Email verification endpoint
+app.post('/api/verify-email', async (req, res) => {
+  const { token } = req.body;
+
+  if (!token) {
+    return res.status(400).json({ error: 'Verification token required' });
+  }
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+
+    // First find user by email only
+    const user = await usersCollection.findOne({ email: decoded.email });
+
+    if (!user) {
+      return res.status(400).json({ error: 'User not found' });
+    }
+
+    // Check if already verified
+    if (user.emailVerified) {
+      return res.json({
+        success: true,
+        message: 'Email already verified! You can log in.'
+      });
+    }
+
+    // Now check token match
+    if (user.verificationToken !== token) {
+      return res.status(400).json({ error: 'Invalid or expired verification token' });
+    }
+
+    // Update user as verified
+    await usersCollection.updateOne(
+      { email: decoded.email },
+      {
+        $set: {
+          emailVerified: true,
+          verificationToken: null,
+          status: 'active', // Set to active
+          plan: 'free'      // Set to free plan
+        }
+      }
+    );
+
+    res.json({
+      success: true,
+      message: 'Email verified successfully! You can now log in.'
+    });
+
+  } catch (error) {
+    console.error('Email verification error:', error);
+    res.status(400).json({ error: 'Invalid or expired verification token' });
+  }
+});
+
 // Send verification email
 app.post('/api/send-verification-email', async (req, res) => {
   const { email } = req.body;

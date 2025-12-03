@@ -42,12 +42,23 @@ module.exports = async (req, res) => {
         const db = await connectToDatabase();
         const usersCollection = db.collection('users');
 
-        const user = await usersCollection.findOne({
-            email: decoded.email,
-            verificationToken: token
-        });
+        // First find user by email only
+        const user = await usersCollection.findOne({ email: decoded.email });
 
         if (!user) {
+            return res.status(400).json({ error: 'User not found' });
+        }
+
+        // Check if already verified
+        if (user.emailVerified) {
+            return res.json({
+                success: true,
+                message: 'Email already verified! You can log in.'
+            });
+        }
+
+        // Now check token match
+        if (user.verificationToken !== token) {
             return res.status(400).json({ error: 'Invalid or expired verification token' });
         }
 
