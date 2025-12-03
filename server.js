@@ -1078,7 +1078,7 @@ async function sendVerificationEmail(email, token) {
           <p>Thank you for creating an account with Resonote!</p>
           <p>Please click the button below to verify your email address:</p>
           <div style="text-align: center; margin: 30px 0;">
-            <a href="${verificationUrl}" style="background-color: #2D7FD3; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">
+            <a href="${verificationUrl}" style="background-color: #2D7FD3; color: #ffffff !important; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">
               Verify Email Address
             </a>
           </div>

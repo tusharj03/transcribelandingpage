@@ -127,7 +127,7 @@ class EmailService {
                     <p>Thank you for creating an account with Resonote!</p>
                     <p>Please click the button below to verify your email address:</p>
                     <div style="text-align: center; margin: 30px 0;">
-                        <a href="${verificationUrl}" class="button">Verify Email Address</a>
+                        <a href="${verificationUrl}" class="button" style="color: #ffffff !important;">Verify Email Address</a>
                     </div>
                     <p>Or copy and paste this link in your browser:</p>
                     <p style="word-break: break-all; color: #666; background: #f1f5f9; padding: 10px; border-radius: 5px;">
