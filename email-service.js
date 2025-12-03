@@ -56,7 +56,7 @@ class EmailService {
     }
 
     async sendVerificationEmail(email, token) {
-        const verificationUrl = `${process.env.BASE_URL || 'resonote.vercel.app'}/verify-email.html?token=${token}`;
+        const verificationUrl = `${process.env.BASE_URL || 'https://resonote-ai.vercel.app'}/verify-email.html?token=${token}`;
 
         const mailOptions = {
             from: process.env.SMTP_FROM || 'tusharj2004@gmail.com',
@@ -69,7 +69,7 @@ class EmailService {
     }
 
     async sendPasswordResetEmail(email, token) {
-        const resetUrl = `${process.env.BASE_URL || 'audiotranscriberlanding.vercel.app'}/reset-password.html?token=${token}`;
+        const resetUrl = `${process.env.BASE_URL || 'https://resonote-ai.vercel.app'}/reset-password.html?token=${token}`;
 
         const mailOptions = {
             from: process.env.SMTP_FROM || 'tusharj2004@gmail.com',

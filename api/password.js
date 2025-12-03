@@ -81,7 +81,7 @@ async function handleRequestReset(req, res, usersCollection) {
         { $set: { resetToken, resetTokenExpires: new Date(Date.now() + 3600000) } }
     );
 
-    const resetUrl = `https://audiotranscriberlanding.vercel.app/reset-password.html?token=${resetToken}`;
+    const resetUrl = `${process.env.BASE_URL || 'https://resonote-ai.vercel.app'}/reset-password.html?token=${resetToken}`;
 
     try {
         await emailTransporter.sendMail({

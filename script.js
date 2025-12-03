@@ -303,10 +303,26 @@ function setupRegistrationModal() {
     const confirmPassword = document.getElementById('confirmPassword');
     const registerMessage = document.getElementById('registerMessage');
 
+    // New elements
+    const registerFormContent = document.getElementById('registerFormContent');
+    const registerSuccessContent = document.getElementById('registerSuccessContent');
+    const registerSuccessDoneBtn = document.getElementById('registerSuccessDoneBtn');
+
+    // Reset function
+    const resetRegisterModal = () => {
+        if (registerFormContent) registerFormContent.style.display = 'block';
+        if (registerSuccessContent) registerSuccessContent.style.display = 'none';
+        registerEmail.value = '';
+        registerPassword.value = '';
+        confirmPassword.value = '';
+        registerMessage.textContent = '';
+    };
+
     // Close register modal
     closeRegisterModal.addEventListener('click', () => {
         registerModal.classList.remove('active');
         document.body.style.overflow = 'auto';
+        setTimeout(resetRegisterModal, 300);
     });
 
     // Show login modal from register
@@ -314,6 +330,7 @@ function setupRegistrationModal() {
         e.preventDefault();
         registerModal.classList.remove('active');
         document.getElementById('loginModal').classList.add('active');
+        setTimeout(resetRegisterModal, 300);
     });
 
     // Registration form submission
@@ -349,49 +366,37 @@ function setupRegistrationModal() {
             const result = await response.json();
 
             if (result.success) {
-                registerMessage.style.color = '#10b981';
-                registerMessage.textContent = 'Account created! Please check your email for verification.';
+                // Show success view
+                if (registerFormContent) registerFormContent.style.display = 'none';
+                if (registerSuccessContent) registerSuccessContent.style.display = 'block';
 
-                // Auto-login after successful registration
-                setTimeout(async () => {
-                    try {
-                        const loginResponse = await fetch('/api/login', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify({ email, password })
-                        });
+                // Auto-login in background
+                try {
+                    const loginResponse = await fetch('/api/login', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ email, password })
+                    });
 
-                        const loginResult = await loginResponse.json();
+                    const loginResult = await loginResponse.json();
 
-                        if (loginResult.success) {
-                            sessionStorage.setItem('userEmail', loginResult.user.email);
-                            sessionStorage.setItem('authToken', loginResult.token);
-                            sessionStorage.setItem('userPlan', loginResult.user.plan);
-                            sessionStorage.setItem('userStatus', loginResult.user.status);
+                    if (loginResult.success) {
+                        sessionStorage.setItem('userEmail', loginResult.user.email);
+                        sessionStorage.setItem('authToken', loginResult.token);
+                        sessionStorage.setItem('userPlan', loginResult.user.plan);
+                        sessionStorage.setItem('userStatus', loginResult.user.status);
 
-                            document.getElementById('userMenu').style.display = 'block';
-                            document.getElementById('loginBtn').style.display = 'none';
-                            document.getElementById('getStartedBtn').style.display = 'none';
-                            document.getElementById('userEmail').textContent = loginResult.user.email;
-
-                            registerModal.classList.remove('active');
-                            document.body.style.overflow = 'auto';
-
-                            showToast('Account created and signed in!', 'success');
-
-                            // Show paywall modal to encourage subscription
-                            setTimeout(() => {
-                                document.getElementById('paywallModal').classList.add('active');
-                                document.body.style.overflow = 'hidden';
-                            }, 1000);
-                        }
-                    } catch (loginError) {
-                        registerMessage.style.color = '#ef4444';
-                        registerMessage.textContent = 'Account created but auto-login failed. Please sign in manually.';
+                        // Update UI immediately (behind the modal)
+                        document.getElementById('userMenu').style.display = 'block';
+                        document.getElementById('loginBtn').style.display = 'none';
+                        document.getElementById('getStartedBtn').style.display = 'none';
+                        document.getElementById('userEmail').textContent = loginResult.user.email;
                     }
-                }, 2000);
+                } catch (loginError) {
+                    console.error('Auto-login failed', loginError);
+                }
 
             } else {
                 registerMessage.textContent = result.error || 'Registration failed';
@@ -401,11 +406,31 @@ function setupRegistrationModal() {
         }
     });
 
+    // Done button handler
+    if (registerSuccessDoneBtn) {
+        registerSuccessDoneBtn.addEventListener('click', () => {
+            registerModal.classList.remove('active');
+            document.body.style.overflow = 'auto';
+
+            // Show toast and paywall if logged in
+            if (sessionStorage.getItem('userEmail')) {
+                showToast('Account created and signed in!', 'success');
+                setTimeout(() => {
+                    document.getElementById('paywallModal').classList.add('active');
+                    document.body.style.overflow = 'hidden';
+                }, 1000);
+            }
+
+            setTimeout(resetRegisterModal, 300);
+        });
+    }
+
     // Close modal when clicking outside
     registerModal.addEventListener('click', (e) => {
         if (e.target === registerModal) {
             registerModal.classList.remove('active');
             document.body.style.overflow = 'auto';
+            setTimeout(resetRegisterModal, 300);
         }
     });
 }

@@ -1009,7 +1009,7 @@ async function handleFailedPayment(invoice) {
 
 // Email sending functions
 async function sendVerificationEmail(email, token) {
-  const verificationUrl = `${process.env.BASE_URL || 'https://audiotranscriberlanding.vercel.app'}/verify-email.html?token=${token}`;
+  const verificationUrl = `${process.env.BASE_URL || 'https://resonote-ai.vercel.app'}/verify-email.html?token=${token}`;
 
   try {
     await emailTransporter.sendMail({
@@ -1040,7 +1040,7 @@ async function sendVerificationEmail(email, token) {
 }
 
 async function sendPasswordResetEmail(email, token) {
-  const resetUrl = `${process.env.BASE_URL || 'https://audiotranscriberlanding.vercel.app'}/reset-password.html?token=${token}`;
+  const resetUrl = `${process.env.BASE_URL || 'https://resonote-ai.vercel.app'}/reset-password.html?token=${token}`;
 
   console.log('📧 Preparing to send email to:', email);
   console.log('🔗 Reset URL:', resetUrl);
