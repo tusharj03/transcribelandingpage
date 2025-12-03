@@ -1007,6 +1007,47 @@ async function handleFailedPayment(invoice) {
   }
 }
 
+// Verify email endpoint
+app.post('/api/verify-email', async (req, res) => {
+  const { token } = req.body;
+
+  if (!token) {
+    return res.status(400).json({ success: false, error: 'Verification token required' });
+  }
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+
+    const user = await usersCollection.findOne({ email: decoded.email, verificationToken: token });
+
+    if (!user) {
+      return res.status(400).json({ success: false, error: 'Invalid or expired verification token' });
+    }
+
+    // Update user as verified
+    await usersCollection.updateOne(
+      { email: decoded.email },
+      {
+        $set: {
+          emailVerified: true,
+          verificationToken: null,
+          status: 'active', // Set to active
+          plan: 'free'      // Set to free plan
+        }
+      }
+    );
+
+    res.json({ success: true, message: 'Email verified successfully' });
+
+  } catch (error) {
+    console.error('Email verification error:', error);
+    if (error.name === 'TokenExpiredError') {
+      return res.status(400).json({ success: false, error: 'Verification token has expired' });
+    }
+    res.status(500).json({ success: false, error: 'Failed to verify email' });
+  }
+});
+
 // Email sending functions
 async function sendVerificationEmail(email, token) {
   const verificationUrl = `${process.env.BASE_URL || 'https://resonote-ai.vercel.app'}/verify-email.html?token=${token}`;
@@ -1015,19 +1056,19 @@ async function sendVerificationEmail(email, token) {
     await emailTransporter.sendMail({
       from: process.env.SMTP_FROM || 'noreply@audiotranscriberpro.com',
       to: email,
-      subject: 'Verify Your Audio Transcriber Pro Account',
+      subject: 'Verify Your Resonote Account',
       html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #6366f1;">Verify Your Email Address</h2>
-          <p>Thank you for creating an account with Audio Transcriber Pro!</p>
+        <div style="font-family: 'Inter', Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #2D7FD3;">Verify Your Email Address</h2>
+          <p>Thank you for creating an account with Resonote!</p>
           <p>Please click the button below to verify your email address:</p>
           <div style="text-align: center; margin: 30px 0;">
-            <a href="${verificationUrl}" style="background-color: #6366f1; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+            <a href="${verificationUrl}" style="background-color: #2D7FD3; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">
               Verify Email Address
             </a>
           </div>
           <p>Or copy and paste this link in your browser:</p>
-          <p style="word-break: break-all; color: #666;">${verificationUrl}</p>
+          <p style="word-break: break-all; color: #666; background: #f1f5f9; padding: 10px; border-radius: 5px;">${verificationUrl}</p>
           <p>This link will expire in 24 hours.</p>
           <p>If you didn't create an account, please ignore this email.</p>
         </div>
@@ -1053,19 +1094,19 @@ async function sendPasswordResetEmail(email, token) {
     const mailOptions = {
       from: process.env.SMTP_FROM || process.env.SMTP_USER,
       to: email,
-      subject: 'Reset Your Audio Transcriber Pro Password',
+      subject: 'Reset Your Resonote Password',
       html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #6366f1;">Reset Your Password</h2>
-          <p>We received a request to reset your password for your Audio Transcriber Pro account.</p>
+        <div style="font-family: 'Inter', Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #2D7FD3;">Reset Your Password</h2>
+          <p>We received a request to reset your password for your Resonote account.</p>
           <p>Click the button below to reset your password:</p>
           <div style="text-align: center; margin: 30px 0;">
-            <a href="${resetUrl}" style="background-color: #6366f1; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+            <a href="${resetUrl}" style="background-color: #2D7FD3; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">
               Reset Password
             </a>
           </div>
           <p>Or copy and paste this link in your browser:</p>
-          <p style="word-break: break-all; color: #666;">${resetUrl}</p>
+          <p style="word-break: break-all; color: #666; background: #f1f5f9; padding: 10px; border-radius: 5px;">${resetUrl}</p>
           <p>This link will expire in 1 hour.</p>
           <p>If you didn't request a password reset, please ignore this email.</p>
         </div>

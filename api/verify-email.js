@@ -58,7 +58,8 @@ module.exports = async (req, res) => {
                 $set: {
                     emailVerified: true,
                     verificationToken: null,
-                    status: 'inactive' // Change from unverified to inactive
+                    status: 'active', // Set to active
+                    plan: 'free'      // Set to free plan
                 }
             }
         );

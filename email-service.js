@@ -109,11 +109,11 @@ class EmailService {
         <html>
         <head>
             <style>
-                body { font-family: Arial, sans-serif; color: #333; }
+                body { font-family: 'Inter', Arial, sans-serif; color: #333; }
                 .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-                .header { background: #6366f1; color: white; padding: 20px; text-align: center; border-radius: 10px 10px 0 0; }
-                .content { background: #f8fafc; padding: 30px; border-radius: 0 0 10px 10px; }
-                .button { background: #6366f1; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; }
+                .header { background: #2D7FD3; color: white; padding: 20px; text-align: center; border-radius: 10px 10px 0 0; }
+                .content { background: #f8fafc; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e2e8f0; }
+                .button { background: #2D7FD3; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; }
                 .footer { text-align: center; margin-top: 20px; color: #64748b; font-size: 14px; }
             </style>
         </head>
@@ -137,7 +137,7 @@ class EmailService {
                     <p>If you didn't create an account, please ignore this email.</p>
                 </div>
                 <div class="footer">
-                    <p>&copy; 2024 Resonote. All rights reserved.</p>
+                    <p>&copy; 2025 Resonote. All rights reserved.</p>
                 </div>
             </div>
         </body>
@@ -151,11 +151,11 @@ class EmailService {
         <html>
         <head>
             <style>
-                body { font-family: Arial, sans-serif; color: #333; }
+                body { font-family: 'Inter', Arial, sans-serif; color: #333; }
                 .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-                .header { background: #6366f1; color: white; padding: 20px; text-align: center; border-radius: 10px 10px 0 0; }
-                .content { background: #f8fafc; padding: 30px; border-radius: 0 0 10px 10px; }
-                .button { background: #6366f1; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; }
+                .header { background: #2D7FD3; color: white; padding: 20px; text-align: center; border-radius: 10px 10px 0 0; }
+                .content { background: #f8fafc; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e2e8f0; }
+                .button { background: #2D7FD3; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; }
                 .footer { text-align: center; margin-top: 20px; color: #64748b; font-size: 14px; }
             </style>
         </head>
@@ -179,7 +179,7 @@ class EmailService {
                     <p>If you didn't request a password reset, please ignore this email.</p>
                 </div>
                 <div class="footer">
-                    <p>&copy; 2024 Resonote. All rights reserved.</p>
+                    <p>&copy; 2025 Resonote. All rights reserved.</p>
                 </div>
             </div>
         </body>
