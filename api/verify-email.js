@@ -70,7 +70,7 @@ module.exports = async (req, res) => {
                     emailVerified: true,
                     verificationToken: null,
                     status: 'active', // Set to active
-                    plan: 'free'      // Set to free plan
+                    plan: 'pro'      // Set to pro plan (Free Pro for everyone)
                 }
             }
         );
