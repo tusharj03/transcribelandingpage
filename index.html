@@ -210,49 +210,19 @@
         <div class="container">
             <div class="section-title">
                 <h2>Simple, Transparent Pricing</h2>
-                <p>Choose the plan that works best for you. All plans include a 14-day free trial.</p>
+                <p>Choose the plan that works best for you.</p>
             </div>
-            <div class="pricing-grid">
-                <div class="pricing-card">
-                    <div class="pricing-header">
-                        <h3 class="pricing-name">Basic</h3>
-                        <div class="pricing-price">$9</div>
-                        <div class="pricing-period">per month</div>
-                    </div>
-                    <div class="pricing-features">
-                        <div class="pricing-feature">
-                            <i class="fas fa-check"></i>
-                            <span>5 hours of transcription per month</span>
-                        </div>
-                        <div class="pricing-feature">
-                            <i class="fas fa-check"></i>
-                            <span>Audio file support</span>
-                        </div>
-                        <div class="pricing-feature">
-                            <i class="fas fa-check"></i>
-                            <span>Basic export options</span>
-                        </div>
-                        <div class="pricing-feature disabled">
-                            <i class="fas fa-times"></i>
-                            <span>Video file support</span>
-                        </div>
-                        <div class="pricing-feature disabled">
-                            <i class="fas fa-times"></i>
-                            <span>AI analysis features</span>
-                        </div>
-                    </div>
-                    <button class="btn btn-outline select-plan" data-plan="basic" data-price="9">Select Plan</button>
-                </div>
+            <div class="pricing-grid" style="grid-template-columns: 1fr; max-width: 600px; margin: 0 auto;">
                 <div class="pricing-card popular">
                     <div class="pricing-header">
-                        <h3 class="pricing-name">Pro</h3>
-                        <div class="pricing-price">$19</div>
-                        <div class="pricing-period">per month</div>
+                        <h3 class="pricing-name">Free Pro Account</h3>
+                        <div class="pricing-price">$0</div>
+                        <div class="pricing-period">for a limited time</div>
                     </div>
                     <div class="pricing-features">
                         <div class="pricing-feature">
                             <i class="fas fa-check"></i>
-                            <span>20 hours of transcription per month</span>
+                            <span>Unlimited transcription</span>
                         </div>
                         <div class="pricing-feature">
                             <i class="fas fa-check"></i>
@@ -271,38 +241,10 @@
                             <span>Priority support</span>
                         </div>
                     </div>
-                    <button class="btn btn-primary select-plan" data-plan="pro" data-price="19">Select Plan</button>
-                </div>
-                <div class="pricing-card">
-                    <div class="pricing-header">
-                        <h3 class="pricing-name">Enterprise</h3>
-                        <div class="pricing-price">$49</div>
-                        <div class="pricing-period">per month</div>
-                    </div>
-                    <div class="pricing-features">
-                        <div class="pricing-feature">
-                            <i class="fas fa-check"></i>
-                            <span>Unlimited transcription</span>
-                        </div>
-                        <div class="pricing-feature">
-                            <i class="fas fa-check"></i>
-                            <span>All Pro features</span>
-                        </div>
-                        <div class="pricing-feature">
-                            <i class="fas fa-check"></i>
-                            <span>Team collaboration</span>
-                        </div>
-                        <div class="pricing-feature">
-                            <i class="fas fa-check"></i>
-                            <span>Custom vocabulary</span>
-                        </div>
-                        <div class="pricing-feature">
-                            <i class="fas fa-check"></i>
-                            <span>Dedicated account manager</span>
-                        </div>
-                    </div>
-                    <button class="btn btn-outline select-plan" data-plan="enterprise" data-price="49">Select
-                        Plan</button>
+                    <button class="btn btn-primary"
+                        onclick="document.getElementById('registerModal').style.display = 'flex'; document.getElementById('registerModal').classList.add('active');">Get
+                        Free Pro
+                        Account</button>
                 </div>
             </div>
             <div id="currentSubscription" style="text-align: center; margin-top: 30px; display: none;">
@@ -512,7 +454,7 @@
     </footer>
 
     <!-- Paywall Modal -->
-    <div class="modal-overlay" id="paywallModal">
+    <div class="modal-overlay" id="paywallModal" style="display: none !important;">
         <div class="modal">
             <button class="close-modal" id="closeModal">
                 <i class="fas fa-times"></i>

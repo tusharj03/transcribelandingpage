@@ -219,70 +219,19 @@
   </header>
 
   <main class="payment-container">
-    <div class="card" role="main" aria-labelledby="checkout-heading">
-      <h2 id="checkout-heading">Complete Your Purchase</h2>
-      <p class="small">Secure checkout — payments handled by Stripe</p>
-
-      <div class="payment-plan" aria-hidden="true">
-        <div>
-          <div id="selectedPlanName" style="font-weight:700">Pro Plan</div>
-          <div class="small">14-day free trial, then subscription billed monthly</div>
-        </div>
-        <div style="font-weight:700">$<span id="selectedPlanPrice">19</span>/mo</div>
+    <div class="card" role="main" aria-labelledby="checkout-heading" style="text-align: center; padding: 40px;">
+      <div style="font-size: 48px; color: var(--success); margin-bottom: 20px;">
+        <i class="fas fa-check-circle"></i>
       </div>
+      <h2 id="checkout-heading">Payment Not Required</h2>
+      <p style="margin-bottom: 30px; color: var(--muted);">
+        For a limited time, everyone gets a <strong>Free Pro Account</strong>!
+        <br>You don't need to enter any payment details.
+      </p>
 
-      <form id="payment-form" novalidate>
-        <div class="form-group">
-          <label for="email">Email address *</label>
-          <input id="email" type="email" name="email" required placeholder="you@example.com" autocomplete="email" />
-          <div class="small" style="margin-top:6px">We will send your receipt and download link to this email.</div>
-        </div>
-
-        <div class="form-group" style="margin-top:14px;">
-          <label>Payment details *</label>
-          <div id="card-element" style="padding:12px;border-radius:8px;border:1px solid #e6edf3;background:#fff;"></div>
-          <div id="card-errors" role="alert" class="small" style="margin-top:8px;color:var(--danger)"></div>
-        </div>
-
-        <div class="form-row" style="margin-top:14px;">
-          <div class="form-group">
-            <label for="name">Full name *</label>
-            <input id="name" type="text" placeholder="Full name" required />
-          </div>
-          <div class="form-group">
-            <label for="country">Country</label>
-            <select id="country" name="country">
-              <option value="">Country (optional)</option>
-              <option value="US">United States</option>
-              <option value="CA">Canada</option>
-              <option value="GB">United Kingdom</option>
-              <option value="AU">Australia</option>
-            </select>
-          </div>
-        </div>
-
-        <div style="margin-top:14px;">
-          <label style="display:flex;gap:8px;align-items:flex-start;cursor:pointer;">
-            <input id="terms" type="checkbox" required style="margin-top:6px" />
-            <span class="small">I agree to the <a href="#" target="_blank">Terms of Service</a> and <a href="#"
-                target="_blank">Privacy Policy</a>.</span>
-          </label>
-        </div>
-
-        <div style="margin-top:18px;display:flex;gap:12px;align-items:center;">
-          <button id="submit-button" class="btn-primary" type="submit">
-            <i class="fas fa-lock"></i>
-            <span id="button-text">Start 14-Day Free Trial</span>
-          </button>
-          <div id="spinner" class="hidden"><i class="fas fa-spinner fa-spin"></i></div>
-        </div>
-
-        <div id="payment-message" class="hidden" aria-live="polite"></div>
-
-        <div class="small" style="margin-top:20px;text-align:center;color:var(--muted);">
-          <i class="fas fa-shield-alt"></i> Your payment information is secure and encrypted
-        </div>
-      </form>
+      <a href="download.html" class="btn btn-primary" style="display: inline-flex; justify-content: center;">
+        <i class="fas fa-download"></i> Download App Now
+      </a>
     </div>
   </main>
 

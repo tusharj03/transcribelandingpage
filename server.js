@@ -265,7 +265,7 @@ app.post('/api/verify-email', async (req, res) => {
           emailVerified: true,
           verificationToken: null,
           status: 'active', // Set to active
-          plan: 'free'      // Set to free plan
+          plan: 'pro'      // Set to pro plan (Free Pro for everyone)
         }
       }
     );
@@ -1022,46 +1022,7 @@ async function handleFailedPayment(invoice) {
   }
 }
 
-// Verify email endpoint
-app.post('/api/verify-email', async (req, res) => {
-  const { token } = req.body;
 
-  if (!token) {
-    return res.status(400).json({ success: false, error: 'Verification token required' });
-  }
-
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-
-    const user = await usersCollection.findOne({ email: decoded.email, verificationToken: token });
-
-    if (!user) {
-      return res.status(400).json({ success: false, error: 'Invalid or expired verification token' });
-    }
-
-    // Update user as verified
-    await usersCollection.updateOne(
-      { email: decoded.email },
-      {
-        $set: {
-          emailVerified: true,
-          verificationToken: null,
-          status: 'active', // Set to active
-          plan: 'free'      // Set to free plan
-        }
-      }
-    );
-
-    res.json({ success: true, message: 'Email verified successfully' });
-
-  } catch (error) {
-    console.error('Email verification error:', error);
-    if (error.name === 'TokenExpiredError') {
-      return res.status(400).json({ success: false, error: 'Verification token has expired' });
-    }
-    res.status(500).json({ success: false, error: 'Failed to verify email' });
-  }
-});
 
 // Email sending functions
 async function sendVerificationEmail(email, token) {
