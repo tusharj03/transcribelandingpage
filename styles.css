@@ -75,7 +75,7 @@ header {
     position: fixed;
     width: 100%;
     top: 0;
-    z-index: 1000;
+    z-index: 10001;
 }
 
 .navbar {
@@ -185,6 +185,20 @@ header {
     background-color: var(--gray-light);
 }
 
+.btn-chrome {
+    background: white;
+    color: var(--dark);
+    border: 1px solid #e2e8f0;
+    box-shadow: var(--shadow);
+}
+
+.btn-chrome:hover {
+    background: #f8fafc;
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--primary);
+}
+
 .btn-secondary {
     background-color: var(--secondary);
     color: white;
@@ -249,7 +263,7 @@ header {
     min-width: 200px;
     box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
     border-radius: 8px;
-    z-index: 1000;
+    z-index: 10002;
     margin-top: 8px;
     border: 1px solid #e2e8f0;
     overflow: hidden;
@@ -359,8 +373,8 @@ header {
 }
 
 .floating-card:nth-child(2) {
-    top: 10%;
-    right: 10%;
+    top: 30%;
+    right: -20%;
     animation-delay: 1s;
 }
 
@@ -491,16 +505,19 @@ header {
     background: linear-gradient(135deg, #f8fafc 0%, #f0f4ff 100%);
 }
 
+
+
 .pricing-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 30px;
+    grid-template-columns: 1fr;
+    max-width: 400px;
+    margin: 0 auto;
 }
 
 .pricing-card {
     background: white;
     border-radius: var(--border-radius);
-    padding: 40px 32px;
+    padding: 24px 20px;
     box-shadow: var(--shadow);
     transition: var(--transition);
     text-align: center;
@@ -540,14 +557,14 @@ header {
 }
 
 .pricing-name {
-    font-size: 24px;
+    font-size: 20px;
     font-weight: 700;
     margin-bottom: 10px;
     color: var(--dark);
 }
 
 .pricing-price {
-    font-size: 48px;
+    font-size: 36px;
     font-weight: 800;
     color: var(--primary);
     margin-bottom: 5px;
@@ -643,6 +660,7 @@ header {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
     gap: 30px;
+    align-items: stretch;
 }
 
 .testimonial-card {
@@ -651,6 +669,9 @@ header {
     padding: 32px;
     box-shadow: var(--shadow);
     transition: var(--transition);
+    display: flex;
+    flex-direction: column;
+    height: 100%;
 }
 
 .testimonial-card:hover {
@@ -661,6 +682,7 @@ header {
 .testimonial-content {
     margin-bottom: 20px;
     position: relative;
+    flex-grow: 1;
 }
 
 .testimonial-content p {
@@ -670,13 +692,7 @@ header {
 }
 
 .testimonial-content::before {
-    content: '"';
-    font-size: 60px;
-    color: var(--primary-light);
-    position: absolute;
-    top: -20px;
-    left: -10px;
-    z-index: 0;
+    display: none;
 }
 
 .testimonial-author {
@@ -881,15 +897,17 @@ footer {
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 2000;
+    z-index: 20000;
     opacity: 0;
     visibility: hidden;
+    pointer-events: none;
     transition: var(--transition);
 }
 
 .modal-overlay.active {
     opacity: 1;
     visibility: visible;
+    pointer-events: auto;
 }
 
 .modal {
@@ -1430,12 +1448,14 @@ footer {
         z-index: 999;
         opacity: 0;
         visibility: hidden;
+        pointer-events: none;
         transition: all 0.3s ease;
     }
 
     .menu-overlay.active {
         opacity: 1;
         visibility: visible;
+        pointer-events: auto;
     }
 
     .hero-text h1 {

@@ -23,21 +23,18 @@ document.addEventListener('DOMContentLoaded', async function () {
 
     const instructionSections = {
         windows: document.getElementById('windowsInstructions'),
-        mac: document.getElementById('macInstructions'),
-        linux: document.getElementById('linuxInstructions')
+        mac: document.getElementById('macInstructions')
     };
 
     // Github download URLs
     const downloadUrls = {
-        windows: 'https://github.com/tusharj03/transcribelandingpage/releases/download/AudioTranscribe/AudioTranscriberPro-Windows.zip',
-        mac: 'https://github.com/tusharj03/transcribelandingpage/releases/download/v1.0.3/resonote.zip',
-        linux: 'https://github.com/tusharj03/transcribelandingpage/releases/download/AudioTranscribe/AudioTranscriberPro-Linux.deb'
+        windows: 'https://github.com/tusharj03/transcribelandingpage/releases/download/v1.0.4/resonote-win-x64.zip',
+        mac: 'https://github.com/tusharj03/transcribelandingpage/releases/download/v1.0.4/resonote-clean.zip'
     };
 
     const availableFiles = {
-        windows: false,
-        mac: true,
-        linux: false
+        windows: true,
+        mac: true
     };
 
     function selectOS(os) {
@@ -60,7 +57,13 @@ document.addEventListener('DOMContentLoaded', async function () {
         osName.textContent = osDisplayName;
 
         const downloadUrl = downloadUrls[os];
-        const fileName = `AudioTranscriberPro-${osDisplayName}.${os === 'windows' || os === 'mac' ? 'zip' : 'deb'}`;
+        let fileName = 'resonote.zip';
+
+        if (os === 'windows') {
+            fileName = 'resonote-win-x64.zip';
+        } else if (os === 'mac') {
+            fileName = 'resonote-clean.zip';
+        }
 
         downloadLink.href = downloadUrl;
         downloadLink.setAttribute('download', fileName);
@@ -87,9 +90,12 @@ document.addEventListener('DOMContentLoaded', async function () {
     });
 
     // Auto-select first available OS
-    if (availableFiles.mac) selectOS('mac');
-    else if (availableFiles.windows) selectOS('windows');
-    else if (availableFiles.linux) selectOS('linux');
+    // Default to mac if available, otherwise windows
+    if (availableFiles.mac && !navigator.platform.toLowerCase().includes('win')) {
+        selectOS('mac');
+    } else {
+        selectOS('windows');
+    }
 
     // Update OS labels
     downloadOptions.forEach(option => {

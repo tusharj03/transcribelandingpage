@@ -146,10 +146,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    // Demo button functionality
-    document.getElementById('watchDemoBtn').addEventListener('click', () => {
-        alert('Demo video would play here. In a real implementation, this would open a video modal or redirect to a demo page.');
-    });
+
 
     // Login button functionality
     document.getElementById('loginBtn').addEventListener('click', () => {
