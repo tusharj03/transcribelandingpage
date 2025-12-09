@@ -97,6 +97,27 @@
             color: var(--primary);
             margin-right: 8px;
         }
+
+        @media (max-width: 768px) {
+            .docs-container {
+                flex-direction: column;
+                padding-top: 100px;
+            }
+
+            .docs-sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+                top: 0;
+                margin-bottom: 30px;
+                overflow-y: visible;
+            }
+
+            .docs-nav-item {
+                display: inline-block;
+                margin-right: 10px;
+            }
+        }
     </style>
 </head>
 

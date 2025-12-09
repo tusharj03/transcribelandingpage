@@ -10,6 +10,22 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
         rel="stylesheet">
+    <style>
+        .contact-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 60px;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        @media (max-width: 768px) {
+            .contact-container {
+                grid-template-columns: 1fr;
+                gap: 40px;
+            }
+        }
+    </style>
 </head>
 
 <body>
@@ -47,7 +63,7 @@
                 <p>We'd love to hear from you</p>
             </div>
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 60px; max-width: 1000px; margin: 0 auto;">
+            <div class="contact-container">
                 <div>
                     <h3 style="font-size: 24px; margin-bottom: 20px; color: var(--dark);">Get in Touch</h3>
                     <p style="color: var(--gray); margin-bottom: 30px; line-height: 1.6;">
