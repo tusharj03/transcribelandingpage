@@ -238,8 +238,11 @@
 
                             // Auto-login logic
                             if (data.token) {
-                                localStorage.setItem('token', data.token);
-                                localStorage.setItem('user', JSON.stringify(data.user));
+                                // Use sessionStorage to match script.js/account.js implementation
+                                sessionStorage.setItem('authToken', data.token);
+                                sessionStorage.setItem('userEmail', data.user.email);
+                                sessionStorage.setItem('userPlan', data.user.plan);
+                                sessionStorage.setItem('userStatus', data.user.status);
 
                                 // Update UI to reflect auto-login
                                 const loginBtn = successContent.querySelector('.btn-primary');
