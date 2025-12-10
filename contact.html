@@ -90,27 +90,83 @@
                 </div>
 
                 <div style="background: white; padding: 30px; border-radius: 12px; box-shadow: var(--shadow);">
-                    <form>
+                    <form id="contactForm">
+                        <div id="statusMessage"
+                            style="display: none; padding: 10px; border-radius: 8px; margin-bottom: 20px;"></div>
+
                         <div style="margin-bottom: 20px;">
-                            <label
+                            <label for="nameInput"
                                 style="display: block; margin-bottom: 8px; color: var(--dark); font-weight: 500;">Name</label>
-                            <input type="text" placeholder="Your name"
+                            <input type="text" id="nameInput" placeholder="Your name" required
                                 style="width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px;">
                         </div>
                         <div style="margin-bottom: 20px;">
-                            <label
+                            <label for="emailInput"
                                 style="display: block; margin-bottom: 8px; color: var(--dark); font-weight: 500;">Email</label>
-                            <input type="email" placeholder="your@email.com"
+                            <input type="email" id="emailInput" placeholder="your@email.com" required
                                 style="width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px;">
                         </div>
                         <div style="margin-bottom: 20px;">
-                            <label
+                            <label for="messageInput"
                                 style="display: block; margin-bottom: 8px; color: var(--dark); font-weight: 500;">Message</label>
-                            <textarea placeholder="How can we help?" rows="4"
+                            <textarea id="messageInput" placeholder="How can we help?" rows="4" required
                                 style="width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; resize: vertical;"></textarea>
                         </div>
-                        <button type="submit" class="btn btn-primary" style="width: 100%;">Send Message</button>
+                        <button type="submit" id="submitBtn" class="btn btn-primary" style="width: 100%;">Send
+                            Message</button>
                     </form>
+
+                    <script>
+                        document.getElementById('contactForm').addEventListener('submit', async function (e) {
+                            e.preventDefault();
+
+                            const submitBtn = document.getElementById('submitBtn');
+                            const statusMessage = document.getElementById('statusMessage');
+                            const originalBtnText = submitBtn.innerHTML;
+
+                            // Reset status
+                            statusMessage.style.display = 'none';
+                            statusMessage.className = '';
+
+                            // Loading state
+                            submitBtn.disabled = true;
+                            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+
+                            const name = document.getElementById('nameInput').value;
+                            const email = document.getElementById('emailInput').value;
+                            const message = document.getElementById('messageInput').value;
+
+                            try {
+                                const response = await fetch('/api/contact', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json'
+                                    },
+                                    body: JSON.stringify({ name, email, message })
+                                });
+
+                                const data = await response.json();
+
+                                if (data.success) {
+                                    statusMessage.style.display = 'block';
+                                    statusMessage.style.backgroundColor = '#d1fae5';
+                                    statusMessage.style.color = '#065f46';
+                                    statusMessage.innerHTML = '<i class="fas fa-check-circle"></i> Message sent successfully! We\'ll get back to you soon.';
+                                    document.getElementById('contactForm').reset();
+                                } else {
+                                    throw new Error(data.error || 'Failed to send message');
+                                }
+                            } catch (error) {
+                                statusMessage.style.display = 'block';
+                                statusMessage.style.backgroundColor = '#fee2e2';
+                                statusMessage.style.color = '#b91c1c';
+                                statusMessage.innerHTML = '<i class="fas fa-exclamation-circle"></i> ' + error.message;
+                            } finally {
+                                submitBtn.disabled = false;
+                                submitBtn.innerHTML = originalBtnText;
+                            }
+                        });
+                    </script>
                 </div>
             </div>
         </div>

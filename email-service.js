@@ -81,6 +81,18 @@ class EmailService {
         return await this.sendEmail(mailOptions);
     }
 
+    async sendContactEmail(name, fromEmail, message) {
+        const mailOptions = {
+            from: process.env.SMTP_FROM || 'tusharj2004@gmail.com', // Sender address (setup dependent, often must be same as auth user)
+            replyTo: fromEmail, // Reply to the person who filled the form
+            to: 'tusharj2004@gmail.com', // Your email
+            subject: `New Contact Form Message from ${name}`,
+            html: this.getContactEmailTemplate(name, fromEmail, message)
+        };
+
+        return await this.sendEmail(mailOptions);
+    }
+
     async sendEmail(mailOptions) {
         if (!this.isConfigured) {
             // Log email to console in development
@@ -180,6 +192,46 @@ class EmailService {
                 </div>
                 <div class="footer">
                     <p>&copy; 2025 Resonote. All rights reserved.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        `;
+    }
+
+    getContactEmailTemplate(name, email, message) {
+        return `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body { font-family: 'Inter', Arial, sans-serif; color: #333; }
+                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                .header { background: #2D7FD3; color: white; padding: 20px; text-align: center; border-radius: 10px 10px 0 0; }
+                .content { background: #f8fafc; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e2e8f0; }
+                .field { margin-bottom: 20px; }
+                .label { font-weight: bold; color: #64748b; font-size: 14px; margin-bottom: 5px; }
+                .value { background: white; padding: 15px; border: 1px solid #e2e8f0; border-radius: 6px; white-space: pre-wrap; }
+                .footer { text-align: center; margin-top: 20px; color: #64748b; font-size: 14px; }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>New Contact Message</h1>
+                </div>
+                <div class="content">
+                    <div class="field">
+                        <div class="label">FROM</div>
+                        <div class="value">${name} (${email})</div>
+                    </div>
+                    <div class="field">
+                        <div class="label">MESSAGE</div>
+                        <div class="value">${message}</div>
+                    </div>
+                </div>
+                <div class="footer">
+                    <p>Sent via Resonote Contact Form</p>
                 </div>
             </div>
         </body>

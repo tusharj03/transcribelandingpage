@@ -323,6 +323,35 @@ app.post('/api/send-verification-email', async (req, res) => {
   }
 });
 
+// Contact Form Endpoint
+app.post('/api/contact', async (req, res) => {
+  const { name, email, message } = req.body;
+
+  if (!name || !email || !message) {
+    return res.status(400).json({ error: 'All fields are required' });
+  }
+
+  // Validate email format
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    return res.status(400).json({ error: 'Invalid email format' });
+  }
+
+  try {
+    const emailService = require('./email-service');
+    await emailService.sendContactEmail(name, email, message);
+
+    res.json({
+      success: true,
+      message: 'Message sent successfully!'
+    });
+
+  } catch (error) {
+    console.error('Contact form error:', error);
+    res.status(500).json({ error: 'Failed to send message' });
+  }
+});
+
 // Password reset request
 // Fixed password reset endpoint
 app.post('/api/request-password-reset', async (req, res) => {
