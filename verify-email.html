@@ -235,8 +235,31 @@
                         if (data.success) {
                             verificationStatus.style.display = 'none';
                             successContent.style.display = 'block';
+
+                            // Auto-login logic
+                            if (data.token) {
+                                localStorage.setItem('token', data.token);
+                                localStorage.setItem('user', JSON.stringify(data.user));
+
+                                // Update UI to reflect auto-login
+                                const loginBtn = successContent.querySelector('.btn-primary');
+                                loginBtn.innerHTML = '<i class="fas fa-layer-group"></i> Go to Dashboard';
+                                loginBtn.href = 'account.html';
+
+                                // Optional: Auto-redirect after a short delay
+                                // setTimeout(() => {
+                                //     window.location.href = 'account.html';
+                                // }, 2000);
+                            }
                         } else {
-                            showError(data.error || 'Verification failed');
+                            if (data.message && data.message.includes('already verified')) {
+                                // Handle already verified case
+                                verificationStatus.style.display = 'none';
+                                successContent.style.display = 'block';
+                                successContent.querySelector('.verification-status').innerHTML = '<i class="fas fa-check-circle"></i> ' + data.message;
+                            } else {
+                                showError(data.error || 'Verification failed');
+                            }
                         }
                     })
                     .catch(error => {

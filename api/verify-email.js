@@ -75,9 +75,23 @@ module.exports = async (req, res) => {
             }
         );
 
+        // Generate session token for auto-login
+        const autologinToken = jwt.sign({
+            userId: user._id,
+            email: user.email
+        }, JWT_SECRET, { expiresIn: '30d' });
+
         res.json({
             success: true,
-            message: 'Email verified successfully! You can now log in.'
+            message: 'Email verified successfully! Logging you in...',
+            token: autologinToken,
+            user: {
+                id: user._id,
+                email: user.email,
+                plan: 'pro',
+                status: 'active',
+                emailVerified: true
+            }
         });
 
     } catch (error) {
