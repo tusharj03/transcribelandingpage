@@ -80,6 +80,10 @@
       "dest": "/api/password.js?action=reset"
     },
     {
+      "src": "/api/contact",
+      "dest": "/api/contact.js"
+    },
+    {
       "src": "/api/(.*)",
       "dest": "/api/$1.js"
     },
