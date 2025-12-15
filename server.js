@@ -132,6 +132,15 @@ app.get('/account.html', (req, res) => res.sendFile(path.join(__dirname, 'accoun
 app.get('/verify-email.html', (req, res) => res.sendFile(path.join(__dirname, 'verify-email.html')));
 app.get('/reset-password.html', (req, res) => res.sendFile(path.join(__dirname, 'reset-password.html')));
 
+// === Web Client Integration ===
+// Serve static files for the web client
+app.use('/web', express.static(path.join(__dirname, 'web-client/dist')));
+
+// Handle client-side routing for the web client (wildcard route under /web)
+app.get('/web/*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'web-client/dist/index.html'));
+});
+
 // Return Stripe publishable key for frontend
 app.get('/api/config', (req, res) => {
   const publishableKey = process.env.STRIPE_PUBLISHABLE_KEY || null;

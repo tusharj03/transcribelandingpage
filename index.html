@@ -29,6 +29,7 @@
                         <a href="#pricing">Pricing</a>
                         <a href="#testimonials">Testimonials</a>
                         <a href="#faq">FAQ</a>
+                        <a href="/web" style="color: var(--primary); font-weight: 500;">Web App</a>
                     </div>
                     <div class="nav-buttons">
                         <button class="btn btn-outline" id="loginBtn">Log In</button>
@@ -77,9 +78,9 @@
                         <a href="download.html" class="btn btn-primary" id="heroDownloadBtn">
                             <i class="fas fa-desktop"></i> Download Desktop App
                         </a>
-                        <a href="https://chromewebstore.google.com/detail/resonote/iddimggbohccfikpkeelhaceooojfiga"
-                            target="_blank" class="btn btn-chrome" id="chromeExtBtn">
-                            <i class="fab fa-chrome" style="color: #4285F4;"></i> Add to Chrome
+                        <a href="/web" class="btn btn-outline"
+                            style="border-width: 2px; color: var(--primary); border-color: var(--primary);">
+                            <i class="fas fa-globe"></i> Open Web App
                         </a>
                     </div>
                     <div id="userStatus" style="margin-top: 20px; display: none;">
@@ -124,7 +125,8 @@
                 <p>A seamless experience across your desktop and browser</p>
             </div>
             <div class="features-grid" style="grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 40px;">
-                <div class="feature-card" style="border: 2px solid var(--primary-light); height: 100%;">
+                <div class="feature-card"
+                    style="border: 2px solid var(--primary-light); height: 100%; min-height: 450px; display: flex; flex-direction: column; justify-content: space-between;">
                     <div class="feature-icon" style="background-color: var(--primary-light); color: var(--primary);">
                         <i class="fas fa-desktop"></i>
                     </div>
@@ -133,45 +135,70 @@
                     <ul style="list-style: none; padding: 0; margin: 20px 0; text-align: left;">
                         <li style="margin-bottom: 10px; display: flex; align-items: start; gap: 10px;">
                             <i class="fas fa-check" style="color: var(--secondary); margin-top: 4px;"></i>
-                            <span>Record system audio (Zoom, Teams, etc.)</span>
+                            <span>Record system audio & mic</span>
                         </li>
                         <li style="margin-bottom: 10px; display: flex; align-items: start; gap: 10px;">
                             <i class="fas fa-check" style="color: var(--secondary); margin-top: 4px;"></i>
-                            <span>Transcribe local video & audio files</span>
+                            <span>Transcribe local files</span>
                         </li>
                         <li style="margin-bottom: 10px; display: flex; align-items: start; gap: 10px;">
                             <i class="fas fa-check" style="color: var(--secondary); margin-top: 4px;"></i>
-                            <span>Full editor & export capabilities</span>
+                            <span>Offline capabilities</span>
                         </li>
                     </ul>
                     <a href="download.html" class="btn btn-primary"
                         style="width: 100%; justify-content: center;">Download App</a>
                 </div>
-                <div class="feature-card" style="border: 2px solid #e2e8f0; height: 100%;">
-                    <div class="feature-icon" style="background-color: #e2e8f0; color: #4b5563;">
-                        <i class="fab fa-chrome"></i>
+
+                <div class="feature-card"
+                    style="border: 2px solid #e2e8f0; height: 100%; min-height: 450px; display: flex; flex-direction: column; justify-content: space-between;">
+                    <div class="feature-icon" style="background-color: #e0f2fe; color: #0284c7;">
+                        <i class="fas fa-globe"></i>
                     </div>
-                    <h3>Chrome Extension</h3>
-                    <p>Quickly capture audio from any browser tab without leaving the page.</p>
+                    <h3>Web Application</h3>
+                    <p>Access your transcriptions from any device instantly.</p>
                     <ul style="list-style: none; padding: 0; margin: 20px 0; text-align: left;">
                         <li style="margin-bottom: 10px; display: flex; align-items: start; gap: 10px;">
                             <i class="fas fa-check" style="color: var(--secondary); margin-top: 4px;"></i>
-                            <span>Capture audio from any tab</span>
+                            <span>No installation required</span>
                         </li>
                         <li style="margin-bottom: 10px; display: flex; align-items: start; gap: 10px;">
                             <i class="fas fa-check" style="color: var(--secondary); margin-top: 4px;"></i>
-                            <span>Seamless integration with web apps</span>
+                            <span>Works on any browser</span>
                         </li>
                         <li style="margin-bottom: 10px; display: flex; align-items: start; gap: 10px;">
                             <i class="fas fa-check" style="color: var(--secondary); margin-top: 4px;"></i>
-                            <span>Lightweight & instant access</span>
+                            <span><strong>No Desktop App needed</strong></span>
+                        </li>
+                    </ul>
+                    <a href="/web" class="btn btn-outline" style="width: 100%; justify-content: center;">Open Web
+                        App</a>
+                </div>
+
+                <div class="feature-card"
+                    style="border: 2px solid #e2e8f0; height: 100%; min-height: 450px; display: flex; flex-direction: column; justify-content: space-between;">
+                    <div class="feature-icon" style="background-color: #f3f4f6; color: #4b5563;">
+                        <i class="fab fa-chrome"></i>
+                    </div>
+                    <h3>Chrome Extension</h3>
+                    <p>Quickly capture audio from any browser tab.</p>
+                    <ul style="list-style: none; padding: 0; margin: 20px 0; text-align: left;">
+                        <li style="margin-bottom: 10px; display: flex; align-items: start; gap: 10px;">
+                            <i class="fas fa-check" style="color: var(--secondary); margin-top: 4px;"></i>
+                            <span>Capture tab audio securely</span>
+                        </li>
+                        <li style="margin-bottom: 10px; display: flex; align-items: start; gap: 10px;">
+                            <i class="fas fa-check" style="color: var(--secondary); margin-top: 4px;"></i>
+                            <span>One-click streaming</span>
+                        </li>
+                        <li style="margin-bottom: 10px; display: flex; align-items: start; gap: 10px;">
+                            <i class="fas fa-exclamation-circle" style="color: #f59e0b; margin-top: 4px;"></i>
+                            <span style="font-size: 0.95em;"><strong>Requires Desktop App</strong></span>
                         </li>
                     </ul>
                     <a href="https://chromewebstore.google.com/detail/resonote/iddimggbohccfikpkeelhaceooojfiga"
                         target="_blank" class="btn btn-outline" style="width: 100%; justify-content: center;">Add to
                         Chrome</a>
-                    <p style="font-size: 12px; color: var(--gray); margin-top: 10px; font-style: italic;">* Requires the
-                        Resonote Desktop App to be installed.</p>
                 </div>
             </div>
         </div>

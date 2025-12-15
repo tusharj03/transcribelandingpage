@@ -148,6 +148,23 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
 
+    // Auth Guard for Web App links
+    document.querySelectorAll('a[href="/web"]').forEach(link => {
+        link.addEventListener('click', (e) => {
+            const userEmail = sessionStorage.getItem('userEmail');
+            if (!userEmail) {
+                e.preventDefault();
+                document.getElementById('loginModal').classList.add('active');
+                document.body.style.overflow = 'hidden';
+
+                // Store intended destination to redirect after login?
+                // For now, the user stays on home page after login, which is fine.
+                // Or we could auto-redirect.
+                sessionStorage.setItem('redirectAfterLogin', '/web');
+            }
+        });
+    });
+
     // Login button functionality
     document.getElementById('loginBtn').addEventListener('click', () => {
         document.getElementById('loginModal').classList.add('active');
@@ -272,6 +289,13 @@ function setupLoginModal() {
                 document.body.style.overflow = 'auto';
 
                 showToast('Successfully signed in!', 'success');
+
+                // Check for redirect
+                const redirect = sessionStorage.getItem('redirectAfterLogin');
+                if (redirect) {
+                    sessionStorage.removeItem('redirectAfterLogin');
+                    window.location.href = redirect;
+                }
             } else {
                 loginMessage.textContent = result.error || 'Login failed';
             }
