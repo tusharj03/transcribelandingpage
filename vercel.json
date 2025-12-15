@@ -36,6 +36,9 @@
   ],
   "routes": [
     {
+      "handle": "filesystem"
+    },
+    {
       "src": "/api/login",
       "dest": "/api/auth.js?action=login"
     },
