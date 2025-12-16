@@ -201,7 +201,8 @@ app.post('/api/register', async (req, res) => {
       verificationToken,
       emailVerified: false,
       createdAt: new Date(),
-      lastLogin: null
+      lastLogin: null,
+      signupMetadata: getSignupMetadata(req)
     };
 
     const result = await usersCollection.insertOne(newUser);
@@ -1211,3 +1212,31 @@ async function startServer() {
 }
 
 startServer().catch(console.error);
+
+function getSignupMetadata(req) {
+  const userAgent = req.headers['user-agent'] || '';
+  const ip = req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '';
+
+  // Vercel specific headers for location
+  const city = req.headers['x-vercel-ip-city'] || null;
+  const country = req.headers['x-vercel-ip-country'] || null;
+  const region = req.headers['x-vercel-ip-country-region'] || null;
+
+  let os = 'Unknown';
+  if (userAgent.includes('Mac')) os = 'Mac';
+  else if (userAgent.includes('Win')) os = 'Windows';
+  else if (userAgent.includes('Linux')) os = 'Linux';
+  else if (userAgent.includes('Android')) os = 'Android';
+  else if (userAgent.includes('iOS') || userAgent.includes('iPhone') || userAgent.includes('iPad')) os = 'iOS';
+
+  return {
+    ip,
+    userAgent,
+    os,
+    location: {
+      city,
+      country,
+      region
+    }
+  };
+}
