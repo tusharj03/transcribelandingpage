@@ -70,7 +70,12 @@ module.exports = async (req, res) => {
 };
 
 async function handleLogin(req, res, usersCollection) {
-    if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+    // Debug: Return received method in error to diagnose 405 issues
+    if (req.method !== 'POST') return res.status(405).json({
+        error: 'Method not allowed',
+        receivedMethod: req.method,
+        debug: 'Auth handler reached'
+    });
     const { email, password } = req.body;
 
     if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
