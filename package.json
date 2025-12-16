@@ -7,7 +7,7 @@
     "start": "node server.js",
     "dev": "nodemon server.js",
     "build": "npm run vercel-build",
-    "vercel-build": "cd web-client && npm install && npm run build && cd .. && rm -rf web && cp -r web-client/dist web",
+    "vercel-build": "mkdir -p public && cd web-client && npm install && npm run build && cd .. && cp -r web-client/dist public/web && cp -n *.html public/ && cp -n *.css public/ && cp -r assets public/ && cp -r icons public/ && cp -r images public/ && cp script.js public/ && cp account.js public/ && cp download.js public/ && cp payment.js public/",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
