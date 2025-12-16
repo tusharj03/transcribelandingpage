@@ -69,7 +69,7 @@ const ChatTab = ({ currentTranscription, user, onLoginRequest }) => {
         setLoading(true);
 
         try {
-            const response = await fetch('https://toolkit.rork.com/text/llm/', {
+            const response = await fetch('/api/llm', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -81,11 +81,12 @@ const ChatTab = ({ currentTranscription, user, onLoginRequest }) => {
                 })
             });
             const data = await response.json();
+            console.log('API Response:', data);
 
             if (data.error) {
                 setMessages(prev => [...prev, { role: 'ai', content: `Error: ${data.error}` }]);
             } else {
-                setMessages(prev => [...prev, { role: 'ai', content: data.content || data.message || "I couldn't generate a response." }]);
+                setMessages(prev => [...prev, { role: 'ai', content: data.completion || data.content || data.message || "I couldn't generate a response." }]);
             }
         } catch (error) {
             setMessages(prev => [...prev, { role: 'ai', content: "Sorry, I encountered a network error. Please try again." }]);

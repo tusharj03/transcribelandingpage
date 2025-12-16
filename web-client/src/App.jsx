@@ -107,19 +107,13 @@ function App() {
               ? { ...job, status: 'processing', progress: clampPercent(data.percent) }
               : job));
           }
-        } else if (type === 'telemetry') {
-          if (data) setRuntimeInfo(data);
-          console.log('[runtime telemetry]', data);
-        } else if (type === 'profile') {
-          setLastProfile(data);
-        } else if (type === 'metrics') {
-          if (data) setLastMetrics(data);
         } else if (type === 'error') {
           console.error(data);
           setStatus('error');
           if (data?.jobId) {
             handleJobError(data.jobId, data.message || 'Unknown error');
           }
+          // alert('Error: ' + (data?.message || data)); // Suppress alert for cleaner UI if needed, but keeping for now.
           alert('Error: ' + (data?.message || data));
         }
       };
@@ -646,50 +640,6 @@ function App() {
           )}
         </div>
         <p className="subtitle">Convert audio, video, and screen recordings to text with AI-powered transcription</p>
-        {runtimeInfo && (() => {
-          const backendLabel = (runtimeInfo?.backend || '').toLowerCase();
-          const hasFallbacks = !!(runtimeInfo?.fallbacks && runtimeInfo.fallbacks.length);
-          const nonWebGPU = backendLabel && !backendLabel.includes('webgpu');
-          const isolation = typeof crossOriginIsolated !== 'undefined' ? crossOriginIsolated : false;
-          const singleThreadWasm = backendLabel.startsWith('wasm') && (runtimeInfo?.wasm?.numThreads === 1);
-          return (
-            <>
-              <div className="runtime-banner" style={{ marginTop: '8px', fontSize: '12px', color: 'var(--text-muted, #444)' }}>
-                <span><strong>Backend:</strong> {runtimeInfo?.backend || 'unknown'} ({runtimeInfo?.dtype || 'unknown'}{runtimeInfo?.runtime_dtype && runtimeInfo?.runtime_dtype !== runtimeInfo?.dtype ? ` runtime ${runtimeInfo?.runtime_dtype}` : ''})</span>
-                {runtimeInfo?.adapter?.name && <span style={{ marginLeft: '12px' }}><strong>Adapter:</strong> {runtimeInfo.adapter.name}{runtimeInfo.adapter.vendor ? ` (${runtimeInfo.adapter.vendor})` : ''}</span>}
-                {runtimeInfo?.wasm?.numThreads && backendLabel.startsWith('wasm') && (
-                  <span style={{ marginLeft: '12px' }}><strong>WASM threads:</strong> {runtimeInfo.wasm.numThreads}</span>
-                )}
-                {hasFallbacks ? <span style={{ marginLeft: '12px' }}><strong>Fallbacks:</strong> {runtimeInfo.fallbacks.join(', ')}</span> : null}
-              </div>
-              {(nonWebGPU || hasFallbacks) && (
-                <div className="runtime-banner" style={{ marginTop: '4px', fontSize: '12px', color: '#a44' }}>
-                  <strong>⚠️ Performance warning:</strong> running on {runtimeInfo.backend}{hasFallbacks ? ` with fallbacks (${runtimeInfo.fallbacks.join(', ')})` : ''}. Try enabling WebGPU or reloading.
-                </div>
-              )}
-              {singleThreadWasm && !isolation && (
-                <div className="runtime-banner" style={{ marginTop: '4px', fontSize: '12px', color: '#a44' }}>
-                  <strong>⚠️ CPU fallback (single-threaded):</strong> page is not cross-origin isolated. Enable COOP/COEP to allow multi-threaded WASM.
-                </div>
-              )}
-            </>
-          );
-        })()}
-        {lastMetrics && (
-          <div className="runtime-banner" style={{ marginTop: '4px', fontSize: '12px', color: 'var(--text-muted, #444)' }}>
-            <span><strong>Last run:</strong> {lastMetrics.tokens_per_sec ? `${lastMetrics.tokens_per_sec.toFixed(2)} tok/s` : 'n/a'}
-              {lastMetrics.ms_per_token ? ` | ${lastMetrics.ms_per_token.toFixed(2)} ms/token` : ''}
-              {lastMetrics.elapsed_ms ? ` | ${Math.round(lastMetrics.elapsed_ms)} ms` : ''}
-              {lastMetrics.chunk_length_s ? ` | chunks ${lastMetrics.chunk_length_s}s/${lastMetrics.stride_length_s || 0}s` : ''}
-              {lastMetrics.stage_timing_ms ? ` | stages A:${Math.round(lastMetrics.stage_timing_ms?.decode || 0)} B:${Math.round(lastMetrics.stage_timing_ms?.encoder || 0)} C:${Math.round(lastMetrics.stage_timing_ms?.decoder || 0)} D:${Math.round(lastMetrics.stage_timing_ms?.post || 0)}` : ''}
-            </span>
-          </div>
-        )}
-        {lastProfile && (
-          <div className="runtime-banner" style={{ marginTop: '4px', fontSize: '12px', color: 'var(--text-muted, #444)' }}>
-            <span><strong>Last profile:</strong> dispatches {lastProfile.dispatches ?? 0}, max kernel {Math.round((lastProfile.maxDispatchMs || 0) * 10) / 10} ms</span>
-          </div>
-        )}
       </header>
 
       {/* Tabs */}

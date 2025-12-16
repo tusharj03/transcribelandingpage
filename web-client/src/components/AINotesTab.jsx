@@ -110,7 +110,7 @@ export default function AINotesTab({ currentTranscription: initialTranscription,
                 ? `${systemPrompt}\n\nAdditional Instructions: ${customInstructions}`
                 : systemPrompt;
 
-            const response = await fetch('https://toolkit.rork.com/text/llm/', {
+            const response = await fetch('/api/llm', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
