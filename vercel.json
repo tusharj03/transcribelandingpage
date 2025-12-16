@@ -55,6 +55,10 @@
       "destination": "/api/contact.js"
     },
     {
+      "source": "/api/llm",
+      "destination": "/api/llm.js"
+    },
+    {
       "source": "/web/((?!assets/|icons/).*)",
       "destination": "/web/index.html"
     }
