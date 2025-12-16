@@ -95,7 +95,7 @@
       "dest": "/api/$1.js"
     },
     {
-      "src": "/web/(.*)",
+      "src": "/web/((?!assets/|icons/).*)",
       "dest": "/web/index.html"
     },
     {
