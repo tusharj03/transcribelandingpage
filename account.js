@@ -1,6 +1,27 @@
 document.addEventListener('DOMContentLoaded', async function () {
-    const userEmail = sessionStorage.getItem('userEmail');
-    const authToken = sessionStorage.getItem('authToken');
+    // Check local storage first
+    let userEmail = sessionStorage.getItem('userEmail');
+    let authToken = sessionStorage.getItem('authToken');
+
+    const storedUser = localStorage.getItem('resonote_user');
+    if (storedUser) {
+        try {
+            const user = JSON.parse(storedUser);
+            if (user && user.email) {
+                // Sync specific values if missing from session
+                if (!userEmail) userEmail = user.email;
+                if (!authToken) authToken = user.token;
+
+                // Also update session storage to keep things in sync
+                sessionStorage.setItem('userEmail', user.email);
+                if (user.token) sessionStorage.setItem('authToken', user.token);
+                if (user.plan) sessionStorage.setItem('userPlan', user.plan);
+                if (user.status) sessionStorage.setItem('userStatus', user.status);
+            }
+        } catch (e) {
+            console.error('Error parsing stored user', e);
+        }
+    }
 
     if (!userEmail) {
         alert('Please log in first');

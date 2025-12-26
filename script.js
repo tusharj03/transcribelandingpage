@@ -196,6 +196,23 @@ document.addEventListener('DOMContentLoaded', function () {
 
 // Check if user has an existing session
 function checkExistingSession() {
+    // Check local storage (shared with web app) first
+    const storedUser = localStorage.getItem('resonote_user');
+    if (storedUser) {
+        try {
+            const user = JSON.parse(storedUser);
+            if (user && user.email) {
+                // Sync to session storage for compatibility
+                sessionStorage.setItem('userEmail', user.email);
+                if (user.token) sessionStorage.setItem('authToken', user.token);
+                if (user.plan) sessionStorage.setItem('userPlan', user.plan);
+                if (user.status) sessionStorage.setItem('userStatus', user.status);
+            }
+        } catch (e) {
+            console.error('Error parsing stored user', e);
+        }
+    }
+
     const userEmail = sessionStorage.getItem('userEmail');
     const userPlan = sessionStorage.getItem('userPlan');
 
@@ -283,6 +300,19 @@ function setupLoginModal() {
                     document.getElementById('currentSubscription').style.display = 'block';
                     document.getElementById('activePlanName').textContent = result.user.plan.charAt(0).toUpperCase() + result.user.plan.slice(1);
                 }
+
+                // Save to localStorage for cross-app login
+                const sharedUser = {
+                    authenticated: true,
+                    email: result.user.email,
+                    plan: result.user.plan,
+                    status: result.user.status,
+                    token: result.token,
+                    // Additional fields that might be useful
+                    id: result.user.id,
+                    emailVerified: result.user.emailVerified
+                };
+                localStorage.setItem('resonote_user', JSON.stringify(sharedUser));
 
                 // Close modal
                 loginModal.classList.remove('active');
@@ -414,6 +444,17 @@ function setupRegistrationModal() {
                         document.getElementById('loginBtn').style.display = 'none';
                         document.getElementById('getStartedBtn').style.display = 'none';
                         document.getElementById('userEmail').textContent = loginResult.user.email;
+
+                        // Save to localStorage for cross-app login
+                        localStorage.setItem('resonote_user', JSON.stringify({
+                            authenticated: true,
+                            email: loginResult.user.email,
+                            plan: loginResult.user.plan,
+                            status: loginResult.user.status,
+                            token: loginResult.token,
+                            id: loginResult.user.id,
+                            emailVerified: loginResult.user.emailVerified
+                        }));
                     }
                 } catch (loginError) {
                     console.error('Auto-login failed', loginError);
@@ -483,6 +524,9 @@ function setupUserDropdown() {
             sessionStorage.removeItem('authToken');
             sessionStorage.removeItem('userPlan');
             sessionStorage.removeItem('userStatus');
+
+            // Clear local storage
+            localStorage.removeItem('resonote_user');
 
             // Update UI
             document.getElementById('userMenu').style.display = 'none';
