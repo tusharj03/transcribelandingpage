@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Documentation | Resonote</title>
+    <link rel="icon" type="image/png" href="icons/icon.png">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <style>
+        .docs-container {
+            display: flex;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 120px 20px 60px;
+            gap: 40px;
+        }
+
+        .docs-sidebar {
+            width: 250px;
+            flex-shrink: 0;
+            position: sticky;
+            top: 120px;
+            height: calc(100vh - 140px);
+            overflow-y: auto;
+        }
+
+        .docs-nav-item {
+            display: block;
+            padding: 10px 15px;
+            color: var(--gray);
+            text-decoration: none;
+            border-radius: 8px;
+            margin-bottom: 5px;
+            font-weight: 500;
+            transition: var(--transition);
+        }
+
+        .docs-nav-item:hover,
+        .docs-nav-item.active {
+            background: var(--primary-light);
+            color: var(--primary-dark);
+        }
+
+        .docs-content {
+            flex: 1;
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+        }
+
+        .docs-section {
+            margin-bottom: 60px;
+            scroll-margin-top: 140px;
+        }
+
+        .docs-section h2 {
+            font-size: 28px;
+            margin-bottom: 20px;
+            color: var(--dark);
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .docs-section h3 {
+            font-size: 20px;
+            margin: 25px 0 15px;
+            color: var(--dark);
+        }
+
+        .docs-section p {
+            color: var(--gray);
+            margin-bottom: 15px;
+            line-height: 1.8;
+        }
+
+        .docs-section ul {
+            list-style-position: inside;
+            color: var(--gray);
+            margin-bottom: 20px;
+            line-height: 1.8;
+        }
+
+        .feature-box {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .feature-box i {
+            color: var(--primary);
+            margin-right: 8px;
+        }
+
+        @media (max-width: 768px) {
+            .docs-container {
+                flex-direction: column;
+                padding-top: 100px;
+            }
+
+            .docs-sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+                top: 0;
+                margin-bottom: 30px;
+                overflow-y: visible;
+            }
+
+            .docs-nav-item {
+                display: inline-block;
+                margin-right: 10px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <div class="container">
+            <nav class="navbar">
+                <a href="index.html" class="logo">
+                    <img src="icons/resonote1080x308.png" alt="Resonote Logo" style="height: 40px; width: auto;">
+                </a>
+                <div class="nav-menu">
+                    <div class="nav-links">
+                        <a href="index.html#features">Features</a>
+                        <a href="index.html#how-it-works">How It Works</a>
+                        <a href="index.html#pricing">Pricing</a>
+                        <a href="updates.html">Updates</a>
+                    </div>
+                    <div class="nav-buttons">
+                        <button class="btn btn-outline" onclick="window.location.href='index.html#loginModal'">Log
+                            In</button>
+                        <button class="btn btn-primary" onclick="window.location.href='index.html#pricing'">Get
+                            Started</button>
+                    </div>
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <div class="docs-container">
+        <aside class="docs-sidebar">
+            <h3 style="margin-bottom: 15px; padding-left: 15px; color: var(--dark);">Guide</h3>
+            <a href="#getting-started" class="docs-nav-item active">Getting Started</a>
+            <a href="#live-transcription" class="docs-nav-item">Live Transcription</a>
+            <a href="#background-recording" class="docs-nav-item">Background Recording</a>
+            <a href="#ai-insights" class="docs-nav-item">AI Insights</a>
+            <a href="#history" class="docs-nav-item">History & Export</a>
+        </aside>
+
+        <main class="docs-content">
+            <section id="getting-started" class="docs-section">
+                <h2>Getting Started</h2>
+                <p>Welcome to Resonote! This guide will help you understand the core features of our application and how
+                    to use them effectively to transcribe and analyze your audio.</p>
+                <div class="feature-box">
+                    <i class="fas fa-info-circle"></i>
+                    <strong>Important:</strong> The Resonote Chrome Extension requires the Desktop Application to be
+                    installed and running on your computer to function. They work together to provide seamless
+                    transcription.
+                </div>
+            </section>
+
+            <section id="live-transcription" class="docs-section">
+                <h2>Live Transcription</h2>
+                <p>The "Transcribe" tab is your main hub for capturing audio. You can choose from three different
+                    sources:</p>
+
+                <h3><i class="fas fa-desktop"></i> Tab Audio</h3>
+                <p>Captures audio specifically from the current browser tab. Ideal for transcribing videos, podcasts, or
+                    online meetings running in your browser.</p>
+
+                <h3><i class="fas fa-microphone"></i> Microphone</h3>
+                <p>Uses your computer's microphone to record your voice or in-person meetings. Ensure you have granted
+                    microphone permissions to the app.</p>
+
+                <h3><i class="fas fa-volume-up"></i> System Audio</h3>
+                <p>Captures all audio playing on your computer. This is perfect for recording meetings from desktop apps
+                    like Zoom or Teams.</p>
+
+                <div class="feature-box">
+                    <strong>Pro Tip:</strong> Use the "Stop & Transcribe" button when you're finished to process the
+                    audio and generate the final text.
+                </div>
+            </section>
+
+            <section id="background-recording" class="docs-section">
+                <h2>Background Recording</h2>
+                <p>Need to multitask? The "Background" sub-tab allows you to record audio from a tab even when you're
+                    not actively viewing it.</p>
+                <ul>
+                    <li><strong>Open Background Tab:</strong> Launches a dedicated tab for recording.</li>
+                    <li><strong>Mute Toggle:</strong> Optionally mute the tab so you don't hear the audio while it's
+                        being recorded.</li>
+                    <li><strong>Rapid Transcribe:</strong> Use this for faster processing when accuracy is less
+                        critical.</li>
+                </ul>
+            </section>
+
+            <section id="ai-insights" class="docs-section">
+                <h2>AI Insights</h2>
+                <p>Resonote doesn't just transcribe; it understands. The "AI Insights" tab offers powerful analysis
+                    tools:</p>
+
+                <h3>Analysis Tools</h3>
+                <ul>
+                    <li><strong>Quick Summary:</strong> Get a brief overview of the main points.</li>
+                    <li><strong>Detailed Analysis:</strong> A deep dive into the content, structure, and key themes.
+                    </li>
+                    <li><strong>Extract Actions:</strong> Automatically identifies tasks and action items from meetings.
+                    </li>
+                </ul>
+
+                <h3>AI Chat Assistant</h3>
+                <p>Have a specific question about the transcript? Use the built-in chat to ask the AI assistant. For
+                    example, "What did John say about the budget?" or "Summarize the marketing plan."</p>
+            </section>
+
+            <section id="history" class="docs-section">
+                <h2>History & Export</h2>
+                <p>All your transcriptions are automatically saved to the "History" tab.</p>
+                <ul>
+                    <li><strong>Search:</strong> Quickly find past transcriptions by keyword.</li>
+                    <li><strong>Filter:</strong> Sort by date or type.</li>
+                    <li><strong>Export:</strong> Download your transcripts as text files or copy them to your clipboard.
+                    </li>
+                </ul>
+            </section>
+        </main>
+    </div>
+
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-column">
+                    <h3>Resonote</h3>
+                    <p style="color: #94a3b8; margin-bottom: 20px;">Transform your audio and video into accurate,
+                        editable text with AI-powered transcription.</p>
+                    <div class="social-links">
+                        <a href="#"><i class="fab fa-twitter"></i></a>
+                        <a href="#"><i class="fab fa-facebook-f"></i></a>
+                        <a href="https://www.instagram.com/resonote.ai/"><i class="fab fa-instagram"></i></a>
+                        <a href="https://www.linkedin.com/company/resonote"><i class="fab fa-linkedin-in"></i></a>
+                    </div>
+                </div>
+                <div class="footer-column">
+                    <h3>Product</h3>
+                    <ul class="footer-links">
+                        <li><a href="index.html#features">Features</a></li>
+                        <li><a href="index.html#pricing">Pricing</a></li>
+                        <li><a href="index.html#how-it-works">Use Cases</a></li>
+                        <li><a href="updates.html">Updates</a></li>
+                    </ul>
+                </div>
+                <div class="footer-column">
+                    <h3>Resources</h3>
+                    <ul class="footer-links">
+                        <li><a href="documentation.html">Documentation</a></li>
+                        <li><a href="blog.html">Blog</a></li>
+                        <li><a href="support.html">Support</a></li>
+                    </ul>
+                </div>
+                <div class="footer-column">
+                    <h3>Company</h3>
+                    <ul class="footer-links">
+                        <li><a href="about.html">About Us</a></li>
+                        <li><a href="careers.html">Careers</a></li>
+                        <li><a href="contact.html">Contact</a></li>
+                        <li><a href="privacy-policy.html">Privacy Policy</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2025 Resonote. All rights reserved.</p>
+                <p>Empowering your voice with AI</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Simple scroll spy for sidebar navigation
+        const navItems = document.querySelectorAll('.docs-nav-item');
+        const sections = document.querySelectorAll('.docs-section');
+
+        window.addEventListener('scroll', () => {
+            let current = '';
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                if (scrollY >= sectionTop - 150) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            navItems.forEach(item => {
+                item.classList.remove('active');
+                if (item.getAttribute('href').includes(current)) {
+                    item.classList.add('active');
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>

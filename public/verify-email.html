@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify Email - Resonote</title>
+    <link rel="icon" type="image/png" href="icons/icon.png">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        .verification-container {
+            max-width: 500px;
+            margin: 100px auto;
+            padding: 40px;
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-lg);
+            text-align: center;
+        }
+
+        .verification-icon {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: var(--primary-light);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 24px;
+        }
+
+        .verification-icon i {
+            font-size: 32px;
+            color: var(--primary);
+        }
+
+        .verification-status {
+            padding: 16px;
+            border-radius: var(--border-radius);
+            margin: 20px 0;
+            font-weight: 500;
+        }
+
+        .status-success {
+            background: var(--secondary-light);
+            color: var(--secondary-dark);
+            border: 1px solid var(--secondary);
+        }
+
+        .status-error {
+            background: var(--danger-light);
+            color: var(--danger);
+            border: 1px solid var(--danger);
+        }
+
+        .status-loading {
+            background: var(--warning-light);
+            color: var(--warning);
+            border: 1px solid var(--warning);
+        }
+
+        .resend-link {
+            margin-top: 20px;
+            color: var(--primary);
+            text-decoration: none;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .resend-link:hover {
+            text-decoration: underline;
+        }
+
+        .resend-message {
+            margin-top: 12px;
+            font-size: 14px;
+            color: var(--gray);
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <div class="container">
+            <nav class="navbar">
+                <a href="index.html" class="logo">
+                    <img src="icons/resonote1080x308.png" alt="Resonote Logo" style="height: 40px; width: auto;">
+                </a>
+                <div class="nav-buttons">
+                    <a href="index.html" class="btn btn-outline">
+                        <i class="fas fa-home"></i> Back to Home
+                    </a>
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="verification-container">
+            <div class="verification-icon">
+                <i class="fas fa-envelope"></i>
+            </div>
+
+            <h1>Verify Your Email</h1>
+            <p>We're verifying your email address. This may take a moment...</p>
+
+            <div id="verificationStatus" class="verification-status status-loading">
+                <i class="fas fa-spinner fa-spin"></i> Verifying your email...
+            </div>
+
+            <div id="successContent" style="display: none;">
+                <div class="verification-status status-success">
+                    <i class="fas fa-check-circle"></i> Email verified successfully!
+                </div>
+                <p>Your email has been verified. You can now sign in to your account.</p>
+                <a href="index.html" class="btn btn-primary" style="margin-top: 20px;">
+                    <i class="fas fa-sign-in-alt"></i> Sign In Now
+                </a>
+            </div>
+
+            <div id="errorContent" style="display: none;">
+                <div class="verification-status status-error">
+                    <i class="fas fa-exclamation-circle"></i> Verification Failed
+                </div>
+                <p id="errorMessage">The verification link is invalid or has expired.</p>
+
+                <div style="margin-top: 24px;">
+                    <a href="#" id="resendVerification" class="resend-link">
+                        <i class="fas fa-redo"></i> Resend verification email
+                    </a>
+                    <div id="resendMessage" class="resend-message" style="display: none;"></div>
+                </div>
+
+                <div style="margin-top: 20px;">
+                    <a href="index.html" class="btn btn-outline">
+                        <i class="fas fa-home"></i> Back to Home
+                    </a>
+                </div>
+            </div>
+
+            <div id="resendForm" style="display: none; margin-top: 24px;">
+                <h3>Resend Verification Email</h3>
+                <div class="form-group" style="margin-bottom: 16px;">
+                    <input type="email" id="resendEmail" placeholder="Enter your email address"
+                        style="width: 100%; padding: 12px; border: 1px solid var(--gray-light); border-radius: 8px;">
+                </div>
+                <button id="submitResend" class="btn btn-primary" style="width: 100%;">
+                    <i class="fas fa-paper-plane"></i> Resend Verification
+                </button>
+                <div id="resendResult" style="margin-top: 12px;"></div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const urlParams = new URLSearchParams(window.location.search);
+            const token = urlParams.get('token');
+            const verificationStatus = document.getElementById('verificationStatus');
+            const successContent = document.getElementById('successContent');
+            const errorContent = document.getElementById('errorContent');
+            const resendForm = document.getElementById('resendForm');
+            const resendVerification = document.getElementById('resendVerification');
+            const submitResend = document.getElementById('submitResend');
+            const resendEmail = document.getElementById('resendEmail');
+            const resendResult = document.getElementById('resendResult');
+            const resendMessage = document.getElementById('resendMessage');
+            const errorMessage = document.getElementById('errorMessage');
+
+            // If token is present, verify it
+            if (token) {
+                verifyEmail(token);
+            } else {
+                showError('No verification token provided');
+            }
+
+            // Resend verification link
+            resendVerification.addEventListener('click', function (e) {
+                e.preventDefault();
+                resendForm.style.display = 'block';
+                resendVerification.style.display = 'none';
+            });
+
+            submitResend.addEventListener('click', function () {
+                const email = resendEmail.value.trim();
+
+                if (!email) {
+                    resendResult.innerHTML = '<div style="color: var(--danger);">Please enter your email address</div>';
+                    return;
+                }
+
+                submitResend.disabled = true;
+                submitResend.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+
+                fetch('/api/send-verification-email', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ email })
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            resendResult.innerHTML = '<div style="color: var(--success);">Verification email sent! Please check your inbox.</div>';
+                            resendForm.style.display = 'none';
+                            resendMessage.style.display = 'block';
+                            resendMessage.innerHTML = 'Verification email sent! Please check your inbox.';
+                            resendMessage.style.color = 'var(--success)';
+                        } else {
+                            resendResult.innerHTML = `<div style="color: var(--danger);">${data.error || 'Failed to send verification email'}</div>`;
+                        }
+                    })
+                    .catch(error => {
+                        resendResult.innerHTML = '<div style="color: var(--danger);">Network error. Please try again.</div>';
+                    })
+                    .finally(() => {
+                        submitResend.disabled = false;
+                        submitResend.innerHTML = '<i class="fas fa-paper-plane"></i> Resend Verification';
+                    });
+            });
+
+            function verifyEmail(token) {
+                fetch('/api/verify-email', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ token })
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            verificationStatus.style.display = 'none';
+                            successContent.style.display = 'block';
+
+                            // Auto-login logic
+                            if (data.token) {
+                                // Use sessionStorage to match script.js/account.js implementation
+                                sessionStorage.setItem('authToken', data.token);
+                                sessionStorage.setItem('userEmail', data.user.email);
+                                sessionStorage.setItem('userPlan', data.user.plan);
+                                sessionStorage.setItem('userStatus', data.user.status);
+
+                                // Update UI to reflect auto-login
+                                const loginBtn = successContent.querySelector('.btn-primary');
+                                loginBtn.innerHTML = '<i class="fas fa-layer-group"></i> Go to Dashboard';
+                                loginBtn.href = 'account.html';
+
+                                // Optional: Auto-redirect after a short delay
+                                // setTimeout(() => {
+                                //     window.location.href = 'account.html';
+                                // }, 2000);
+                            }
+                        } else {
+                            if (data.message && data.message.includes('already verified')) {
+                                // Handle already verified case
+                                verificationStatus.style.display = 'none';
+                                successContent.style.display = 'block';
+                                successContent.querySelector('.verification-status').innerHTML = '<i class="fas fa-check-circle"></i> ' + data.message;
+                            } else {
+                                showError(data.error || 'Verification failed');
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        showError('Network error. Please try again.');
+                    });
+            }
+
+            function showError(message) {
+                verificationStatus.style.display = 'none';
+                errorContent.style.display = 'block';
+                errorMessage.textContent = message;
+            }
+        });
+    </script>
+</body>
+
+</html>

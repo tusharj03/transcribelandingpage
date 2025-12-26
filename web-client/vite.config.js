@@ -3,8 +3,8 @@ import react from '@vitejs/plugin-react'
 
 // https://vite.dev/config/
 export default defineConfig({
-  base: '/web/',
   plugins: [react()],
+  base: '/web/',
   server: {
     headers: {
       'Cross-Origin-Opener-Policy': 'same-origin',
@@ -22,11 +22,6 @@ export default defineConfig({
             proxyReq.setHeader('User-Agent', 'resonote/1.2.0');
           });
         },
-      },
-      '/api': {
-        target: 'http://localhost:3000',
-        changeOrigin: true,
-        secure: false,
       },
     },
   },

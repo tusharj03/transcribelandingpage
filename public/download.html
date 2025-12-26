@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Download - Resonote</title>
+    <link rel="icon" type="image/png" href="icons/icon.png">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+</head>
+
+<body>
+    <!-- Header -->
+    <header>
+        <div class="container">
+            <nav class="navbar">
+                <a href="index.html" class="logo">
+                    <img src="icons/resonote1080x308.png" alt="Resonote Logo" style="height: 40px; width: auto;">
+                </a>
+                <div class="nav-buttons">
+                    <a href="account.html" class="btn btn-outline">
+                        <i class="fas fa-user"></i> My Account
+                    </a>
+                    <a href="index.html" class="btn btn-outline">
+                        <i class="fas fa-home"></i> Back to Home
+                    </a>
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Download Section -->
+    <section class="download-container">
+        <div class="download-card">
+            <div class="download-icon">
+                <i class="fas fa-download"></i>
+            </div>
+            <h1>Download Resonote</h1>
+            <p>Choose your operating system to download the application</p>
+
+            <div class="download-tabs" style="margin-bottom: 30px; display: flex; gap: 20px; justify-content: center;">
+                <button class="tab-btn active" onclick="switchTab('desktop')" id="desktopTab"
+                    style="background: none; border: none; padding: 10px 20px; font-weight: 600; color: var(--primary); border-bottom: 2px solid var(--primary); cursor: pointer;">
+                    <i class="fas fa-desktop"></i> Desktop App
+                </button>
+                <button class="tab-btn" onclick="switchTab('extension')" id="extensionTab"
+                    style="background: none; border: none; padding: 10px 20px; font-weight: 600; color: var(--gray); border-bottom: 2px solid transparent; cursor: pointer;">
+                    <i class="fab fa-chrome"></i> Chrome Extension
+                </button>
+            </div>
+
+            <div id="desktopContent">
+                <div class="download-options">
+                    <div class="download-option" data-os="windows">
+                        <i class="fab fa-windows"></i>
+                        <h3>Windows</h3>
+                        <p>Windows 10/11 (64-bit)</p>
+                    </div>
+                    <div class="download-option" data-os="mac">
+                        <i class="fab fa-apple"></i>
+                        <h3>macOS</h3>
+                        <p>macOS 11.0 or later</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="extensionContent" style="display: none;">
+                <div class="download-card"
+                    style="border: 2px solid #e2e8f0; padding: 30px; max-width: 500px; margin: 0 auto;">
+                    <i class="fab fa-chrome" style="font-size: 48px; color: #4b5563; margin-bottom: 20px;"></i>
+                    <h3>Resonote for Chrome</h3>
+                    <p style="margin-bottom: 20px;">Capture audio from any browser tab without installing a desktop app.
+                    </p>
+                    <a href="https://chromewebstore.google.com/detail/resonote/iddimggbohccfikpkeelhaceooojfiga"
+                        target="_blank" class="btn btn-primary" style="justify-content: center;">
+                        <i class="fas fa-external-link-alt"></i> Go to Chrome Web Store
+                    </a>
+                </div>
+            </div>
+
+            <div id="downloadInstructions" style="text-align: left; display: none;">
+                <h3 style="margin-bottom: 16px; color: var(--dark);">Installation Instructions</h3>
+                <div id="windowsInstructions" style="display: none;">
+                    <ol style="color: var(--gray); line-height: 1.8; padding-left: 20px;">
+                        <li>Click the download button below to get the .zip file</li>
+                        <li>Extract the contents of the .zip file</li>
+                        <li>Open the extracted folder and double-click "Resonote.exe"</li>
+                        <li>Launch Resonote from your Start menu</li>
+                        <li>Sign in with your email address to activate your subscription</li>
+                    </ol>
+                </div>
+                <div id="macInstructions" style="display: none;">
+                    <ol style="color: var(--gray); line-height: 1.8; padding-left: 20px;">
+                        <li>Click the download button below to get the .dmg file</li>
+                        <li>Open the downloaded .dmg file</li>
+                        <li>Drag Resonote to your Applications folder</li>
+                        <li>Launch Resonote from your Applications</li>
+                        <li style="margin-top: 8px; margin-bottom: 8px;">
+                            <strong>Note:</strong> If you see a "damaged" app message, run this in Terminal:
+                            <div
+                                style="background: var(--gray-light); padding: 8px; border-radius: 4px; margin-top: 4px; font-family: monospace; user-select: all;">
+                                xattr -cr ~/Downloads/resonote.app</div>
+                        </li>
+                        <li>Sign in with your email address to activate your subscription</li>
+                    </ol>
+                </div>
+                <div id="linuxInstructions" style="display: none;">
+                    <ol style="color: var(--gray); line-height: 1.8; padding-left: 20px;">
+                        <li>Download the .deb package below</li>
+                        <li>Open terminal and navigate to download directory</li>
+                        <li>Run: <code
+                                style="background: var(--gray-light); padding: 2px 6px; border-radius: 4px;">sudo dpkg -i resonote_1.0.0_amd64.deb</code>
+                        </li>
+                        <li>Launch Resonote from your applications menu</li>
+                        <li>Sign in with your email address to activate your subscription</li>
+                    </ol>
+                </div>
+            </div>
+
+            <div id="downloadButton" style="display: none; margin-top: 30px;">
+                <a href="#" class="btn btn-primary" id="downloadLink" style="justify-content: center;">
+                    <i class="fas fa-download"></i> Download for <span id="osName"></span>
+                </a>
+                <div style="margin-top: 15px; font-size: 0.9em; color: var(--gray);">
+                    <a href="/web" style="color: var(--primary); text-decoration: none; font-weight: 500;">
+                        <i class="fas fa-globe"></i> Or try the Web Version (No download required)
+                    </a>
+                </div>
+            </div>
+
+            <!-- Subscription Info Section -->
+            <div id="subscriptionInfo"
+                style="display: none; margin-top: 40px; padding: 20px; background: var(--secondary-light); border-radius: var(--border-radius); border-left: 4px solid var(--secondary);">
+                <h3 style="margin-bottom: 12px; color: var(--dark);">
+                    <i class="fas fa-user-check"></i> Subscription Active
+                </h3>
+                <p style="color: var(--gray); margin-bottom: 16px;" id="subscriptionText">
+                    Welcome! Your subscription is active.
+                </p>
+                <div style="display: flex; gap: 12px; flex-wrap: wrap; justify-content: center;">
+                    <a href="account.html" class="btn btn-outline">
+                        <i class="fas fa-cog"></i> Manage Subscription
+                    </a>
+                    <button id="checkSubscription" class="btn btn-outline">
+                        <i class="fas fa-sync-alt"></i> Refresh Status
+                    </button>
+                </div>
+            </div>
+
+            <div
+                style="margin-top: 40px; padding: 20px; background: var(--gray-light); border-radius: var(--border-radius);">
+                <h3 style="margin-bottom: 12px; color: var(--dark);">Need Help?</h3>
+                <p style="color: var(--gray); margin-bottom: 16px;">Check out our documentation or contact support if
+                    you encounter any issues.</p>
+                <div style="display: flex; gap: 12px; justify-content: center;">
+                    <a href="documentation.html" class="btn btn-outline">
+                        <i class="fas fa-book"></i> Documentation
+                    </a>
+                    <a href="support.html" class="btn btn-outline">
+                        <i class="fas fa-headset"></i> Contact Support
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <script>
+        function switchTab(tab) {
+            const desktopContent = document.getElementById('desktopContent');
+            const extensionContent = document.getElementById('extensionContent');
+            const desktopTab = document.getElementById('desktopTab');
+            const extensionTab = document.getElementById('extensionTab');
+
+            // Hide everything first
+            document.getElementById('downloadInstructions').style.display = 'none';
+            document.getElementById('downloadButton').style.display = 'none';
+            document.querySelectorAll('.download-option').forEach(opt => {
+                opt.style.background = 'var(--gray-light)';
+            });
+
+            if (tab === 'desktop') {
+                desktopContent.style.display = 'block';
+                extensionContent.style.display = 'none';
+                desktopTab.style.color = 'var(--primary)';
+                desktopTab.style.borderBottomColor = 'var(--primary)';
+                extensionTab.style.color = 'var(--gray)';
+                extensionTab.style.borderBottomColor = 'transparent';
+
+                // Select first available desktop OS by default logic if needed, 
+                // but let the existing script handle the click
+            } else {
+                desktopContent.style.display = 'none';
+                extensionContent.style.display = 'block';
+                desktopTab.style.color = 'var(--gray)';
+                desktopTab.style.borderBottomColor = 'transparent';
+                extensionTab.style.color = 'var(--primary)';
+                extensionTab.style.borderBottomColor = 'var(--primary)';
+            }
+        }
+    </script>
+    <script src="download.js"></script>
+</body>
+
+</html>

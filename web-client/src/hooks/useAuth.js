@@ -1,27 +1,22 @@
 import { useState, useEffect } from 'react';
 
-const API_BASE_URL = ''; // Relative path since we are served from the same domain
+const API_BASE_URL = 'https://resonote-ai.vercel.app';
 
 export function useAuth() {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    // Load user from session storage on mount (shared with main site)
+    // Load user from local storage on mount
     useEffect(() => {
-        const email = sessionStorage.getItem('userEmail');
-        const token = sessionStorage.getItem('authToken');
-        const plan = sessionStorage.getItem('userPlan');
-        const status = sessionStorage.getItem('userStatus');
-
-        if (email && token) {
-            setUser({
-                authenticated: true,
-                email,
-                plan: plan || 'free',
-                status: status || 'active',
-                token
-            });
+        const storedUser = localStorage.getItem('resonote_user');
+        if (storedUser) {
+            try {
+                setUser(JSON.parse(storedUser));
+            } catch (e) {
+                console.error('Failed to parse stored user', e);
+                localStorage.removeItem('resonote_user');
+            }
         }
         setLoading(false);
     }, []);
@@ -30,8 +25,7 @@ export function useAuth() {
         setLoading(true);
         setError(null);
         try {
-            // Use the main site's login endpoint for consistency
-            const response = await fetch(`${API_BASE_URL}/api/login`, {
+            const response = await fetch(`${API_BASE_URL}/api/dmg-login`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -59,17 +53,12 @@ export function useAuth() {
                     email: result.user.email,
                     plan: result.user.plan,
                     status: result.user.status,
+                    subscribedAt: result.user.subscribedAt,
+                    currentPeriodEnd: result.user.currentPeriodEnd,
                     token: result.token
                 };
-
                 setUser(userData);
-
-                // Save to sessionStorage to share with main site
-                sessionStorage.setItem('userEmail', userData.email);
-                sessionStorage.setItem('authToken', userData.token);
-                sessionStorage.setItem('userPlan', userData.plan);
-                sessionStorage.setItem('userStatus', userData.status);
-
+                localStorage.setItem('resonote_user', JSON.stringify(userData));
                 return { success: true, user: userData };
             } else {
                 throw new Error(result.error || 'Authentication failed');
@@ -85,12 +74,7 @@ export function useAuth() {
 
     const logout = () => {
         setUser(null);
-        sessionStorage.removeItem('userEmail');
-        sessionStorage.removeItem('authToken');
-        sessionStorage.removeItem('userPlan');
-        sessionStorage.removeItem('userStatus');
-        // Optional: Redirect to main home?
-        // window.location.href = '/'; 
+        localStorage.removeItem('resonote_user');
     };
 
     // Helper to check plan access

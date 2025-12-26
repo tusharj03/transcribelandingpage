@@ -20,10 +20,10 @@ function enhanceStructuredNotes(text) {
         .replace(/<h2>/g, '<h2 style="color: var(--primary); border-bottom: 1px solid var(--gray-light); padding-bottom: 8px; margin: 25px 0 15px 0;">')
         .replace(/<h3>/g, '<h3 style="color: var(--dark); margin: 20px 0 12px 0;">')
         .replace(/<h4>/g, '<h4 style="color: var(--secondary-dark); margin: 16px 0 10px 0;">') // Added h4 styling
-        .replace(/<p>/g, '<p style="margin-bottom: 16px; line-height: 1.6;">')
-        .replace(/<ul>/g, '<ul style="margin: 16px 0; padding-left: 24px;">')
-        .replace(/<ol>/g, '<ol style="margin: 16px 0; padding-left: 24px;">')
-        .replace(/<li>/g, '<li style="margin-bottom: 8px; line-height: 1.5;">')
+        .replace(/<p>/g, '<p style="margin-bottom: 8px; line-height: 1.6;">')
+        .replace(/<ul>/g, '<ul style="margin: 8px 0; padding-left: 24px;">')
+        .replace(/<ol>/g, '<ol style="margin: 8px 0; padding-left: 24px;">')
+        .replace(/<li>/g, '<li style="margin-bottom: 4px; line-height: 1.5;">')
         .replace(/<strong>/g, '<strong style="color: var(--primary-dark);">')
         .replace(/<em>/g, '<em style="color: var(--gray);">')
         .replace(/<table>/g, '<table style="width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px;">')
@@ -42,7 +42,7 @@ function formatEnhancedNotes(notes) {
     }
 }
 
-export default function AINotesTab({ currentTranscription: initialTranscription, user, onLoginRequest, isViewMode = false }) {
+export default function AINotesTab({ currentTranscription: initialTranscription, liveNotes, user, onLoginRequest, isViewMode = false }) {
     // State
     const [currentTranscription, setCurrentTranscription] = useState(initialTranscription);
     const [selectedTemplate, setSelectedTemplate] = useState('summary');
@@ -55,27 +55,23 @@ export default function AINotesTab({ currentTranscription: initialTranscription,
 
     // Update internal state when prop changes
     useEffect(() => {
-        if (initialTranscription) {
+        if (liveNotes) {
+            setGeneratedNotes(liveNotes);
+        } else if (initialTranscription) {
             // If we are viewing saved notes from history, populate the output immediately
             if (isViewMode) {
                 setGeneratedNotes(initialTranscription);
-                // We don't overwrite currentTranscription because in view mode, 
-                // initialTranscription IS the notes, but currentTranscription usually holds source text.
-                // However, the UI uses currentTranscription to show source. 
-                // In view mode, we might not have the source text available if history only saved the notes.
-                // But typically history saves the RESULT. 
-                // So let's just show the notes.
             } else {
                 setCurrentTranscription(initialTranscription);
-                setGeneratedNotes(null); // Clear previous notes when new transcription arrives? 
-                // Maybe not if we want to keep them. But for now this is safer to avoid stale state.
+                // Only clear if we aren't streaming live notes
+                if (!liveNotes) setGeneratedNotes(null);
             }
 
             if (selectedHistoryId === 'current') {
                 // Keep current selected
             }
         }
-    }, [initialTranscription, isViewMode]);
+    }, [initialTranscription, isViewMode, liveNotes]);
 
     // Load history
     useEffect(() => {

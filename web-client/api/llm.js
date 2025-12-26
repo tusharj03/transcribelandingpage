@@ -18,12 +18,8 @@ export default async function handler(req, res) {
         return res.status(405).json({ error: 'Method not allowed' });
     }
 
-    // In production (Vercel), we want to use the same domain, so relative path is fine.
-    // The proxy in vite.config.js handles dev.
-    const API_BASE = '/api/llm';
-
     try {
-        const response = await fetch(API_BASE, {
+        const response = await fetch('https://toolkit.rork.com/text/llm/', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
