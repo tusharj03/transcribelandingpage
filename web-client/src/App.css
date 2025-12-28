@@ -2543,6 +2543,57 @@ h1 {
     box-shadow: var(--shadow);
 }
 
+/* Markdown Styles */
+.message-content h1,
+.message-content h2,
+.message-content h3,
+.message-content h4 {
+    margin-top: 10px;
+    margin-bottom: 5px;
+    font-size: 1.1em;
+    font-weight: 600;
+}
+
+.message-content p {
+    margin-bottom: 8px;
+}
+
+.message-content p:last-child {
+    margin-bottom: 0;
+}
+
+.message-content ul,
+.message-content ol {
+    margin-left: 0;
+    padding-left: 20px;
+    margin-bottom: 8px;
+}
+
+.message-content strong {
+    font-weight: 700;
+}
+
+.message-content code {
+    background-color: rgba(0, 0, 0, 0.05);
+    padding: 2px 4px;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 0.9em;
+}
+
+.message-content pre {
+    background-color: #f1f5f9;
+    padding: 10px;
+    border-radius: 6px;
+    overflow-x: auto;
+    margin-bottom: 8px;
+}
+
+.message-content pre code {
+    background-color: transparent;
+    padding: 0;
+}
+
 .chat-input-container {
     display: flex;
     gap: 12px;

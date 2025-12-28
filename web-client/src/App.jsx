@@ -9,6 +9,7 @@ import { useAuth } from './hooks/useAuth';
 import { useLiveNotes } from './hooks/useLiveNotes';
 import { useLiveAssist } from './hooks/useLiveAssist';
 import { marked } from 'marked';
+import { translator } from './lib/TranslatorEngine';
 
 // We'll use FontAwesome for icons by adding the CDN link in index.html, 
 // matching the original app.
@@ -16,39 +17,47 @@ import { marked } from 'marked';
 // ===============================
 // 🔌 Universal Native Host Client
 // ===============================
+const POSSIBLE_EXTENSION_IDS = [
+  'lamboikcmffdoaolbcdadahfbejjcioe', // Testing ID
+  'iddimggbohccfikpkeelhaceooojfiga'  // Production ID
+];
+
 class NativeHostClient {
   constructor() {
     this.mode = 'extension'; // 'extension' | 'websocket'
     this.ws = null;
     this.wsPort = 3000;
-    this.extensionId = 'lamboikcmffdoaolbcdadahfbejjcioe';
+    this.extensionId = null; // Will be set on connection
     this.isConnected = false;
   }
 
   async connect() {
-    // 1. Try Chrome Extension first
+    // 1. Try Chrome Extension first (iterate through possible IDs)
     if (window.chrome && window.chrome.runtime && window.chrome.runtime.sendMessage) {
-      try {
-        const response = await new Promise((resolve) => {
-          // Timeout for extension check
-          const pid = setTimeout(() => resolve(null), 1000);
-          try {
-            window.chrome.runtime.sendMessage(this.extensionId, { action: 'ping' }, (res) => {
-              clearTimeout(pid);
-              if (window.chrome.runtime.lastError) resolve(null);
-              else resolve(res);
-            });
-          } catch (e) { clearTimeout(pid); resolve(null); }
-        });
+      for (const id of POSSIBLE_EXTENSION_IDS) {
+        try {
+          const response = await new Promise((resolve) => {
+            // Timeout for extension check
+            const pid = setTimeout(() => resolve(null), 1000);
+            try {
+              window.chrome.runtime.sendMessage(id, { action: 'ping' }, (res) => {
+                clearTimeout(pid);
+                if (window.chrome.runtime.lastError) resolve(null);
+                else resolve(res);
+              });
+            } catch (e) { clearTimeout(pid); resolve(null); }
+          });
 
-        if (response && response.type === 'PONG') {
-          console.log("✅ Native Host connected via Chrome Extension");
-          this.mode = 'extension';
-          this.isConnected = true;
-          return true;
+          if (response && response.type === 'PONG') {
+            console.log(`✅ Native Host connected via Chrome Extension (${id})`);
+            this.mode = 'extension';
+            this.isConnected = true;
+            this.extensionId = id;
+            return true;
+          }
+        } catch (e) {
+          console.log(`Extension check failed for ${id}, trying next...`);
         }
-      } catch (e) {
-        console.log("Extension check failed, trying WebSocket...");
       }
     }
 
@@ -94,10 +103,10 @@ class NativeHostClient {
 
   sendMessage(message, callback, explicitSocket = null) {
     if (this.mode === 'extension') {
-      if (window.chrome && window.chrome.runtime) {
+      if (window.chrome && window.chrome.runtime && this.extensionId) {
         window.chrome.runtime.sendMessage(this.extensionId, message, callback);
       } else {
-        callback({ type: 'ERROR', message: 'Extension API unavailable' });
+        callback({ type: 'ERROR', message: 'Extension API unavailable or not connected' });
       }
     } else if (this.mode === 'websocket') {
       const targetWs = explicitSocket || this.ws;
@@ -126,6 +135,12 @@ class NativeHostClient {
       callback({ type: 'ERROR', message: 'No connection mode active' });
     }
   }
+
+  getActiveExtensionId() {
+    // If connected via extension, return that ID.
+    // If not, return the first one as a default fallback for UI hints, or null.
+    return this.extensionId || POSSIBLE_EXTENSION_IDS[0];
+  }
 }
 
 const nativeClient = new NativeHostClient();
@@ -144,7 +159,7 @@ function App() {
   const [loginLoading, setLoginLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [nativeHostConnected, setNativeHostConnected] = useState(false);
-  const EXTENSION_ID = 'iddimggbohccfikpkeelhaceooojfiga';
+  const [extensionId, setExtensionId] = useState(POSSIBLE_EXTENSION_IDS[0]); // Default to first for initial state
 
   // Popup State
   const [showSlowPopup, setShowSlowPopup] = useState(false);
@@ -184,6 +199,59 @@ function App() {
   const [lastMetrics, setLastMetrics] = useState(null);
   const [lastProfile, setLastProfile] = useState(null);
   const [viewingSavedNotes, setViewingSavedNotes] = useState(false);
+
+  // Translation State
+  const [translationEnabled, setTranslationEnabled] = useState(false);
+  const [targetLang, setTargetLang] = useState('es');
+  const [translatedText, setTranslatedText] = useState('');
+  const [translatorReady, setTranslatorReady] = useState(false);
+  const [translationProgress, setTranslationProgress] = useState(0);
+  const [translationStatus, setTranslationStatus] = useState('');
+
+  useEffect(() => {
+    // 1. Eager Initialization / Download
+    const initTranslator = async () => {
+      if (translationEnabled && !translatorReady) {
+        setTranslationStatus(`Initializing ${targetLang}...`);
+        // Reset progress to 0 if re-initializing
+        setTranslationProgress(0);
+
+        try {
+          translator.setOnProgress((progress, statusText) => {
+            setTranslationProgress(progress);
+            setTranslationStatus(statusText);
+          });
+          // Initialize engine (this triggers download)
+          await translator.init('en', targetLang);
+          setTranslatorReady(true);
+          setTranslationStatus('Ready');
+        } catch (e) {
+          console.error("Translator Init Error:", e);
+          setTranslationStatus('Error');
+        }
+      }
+    };
+    initTranslator();
+  }, [translationEnabled, targetLang, translatorReady]);
+
+  useEffect(() => {
+    // 2. Perform Translation
+    const runTranslation = async () => {
+      if (translationEnabled && translatorReady && transcription && transcription.trim().length > 0) {
+        try {
+          const result = await translator.translate(transcription);
+          setTranslatedText(result);
+          // setTranslationStatus('Translated'); // Optional, conflicts with download status maybe?
+        } catch (e) {
+          console.error("Translation error:", e);
+        }
+      }
+    };
+
+    // Debounce translation
+    const timer = setTimeout(runTranslation, 1000);
+    return () => clearTimeout(timer);
+  }, [transcription, translationEnabled, targetLang, translatorReady]);
 
   // Live AI Hooks
   const { liveNotes } = useLiveNotes({
@@ -319,6 +387,9 @@ function App() {
       const connected = await nativeClient.connect();
       console.log("🕵️‍♂️ Connection Result:", connected);
       setNativeHostConnected(!!connected);
+      if (connected) {
+        setExtensionId(nativeClient.getActiveExtensionId());
+      }
     };
 
     // Check immediately
@@ -443,15 +514,28 @@ function App() {
     }
   };
 
-  const handleJobCompletion = (jobId, text) => {
+  const handleJobCompletion = async (jobId, text) => {
+    // Check translation
+    let finalText = text;
+    if (translationEnabled && translatorReady) {
+      try {
+        finalText = await translator.translate(text);
+      } catch (e) {
+        console.error("Auto-translation failed for job", e);
+      }
+    }
+
     const job = queueRef.current.find(j => j.id === jobId) || activeJobRef.current;
 
     // For non-queued jobs (e.g., mic/system audio), fall back to the legacy flow
     if (!job && !queueRef.current.length) {
       activeJobRef.current = null;
-      setTranscription(text);
+      setTranscription(finalText);
+      // Also update translatedText state so the view knows it matches
+      if (translationEnabled) setTranslatedText(finalText);
+
       setStatus('complete');
-      saveToHistory(`Transcription ${new Date().toLocaleTimeString()}`, text, 'transcription', selectedModel);
+      saveToHistory(`Transcription ${new Date().toLocaleTimeString()}`, finalText, 'transcription', selectedModel);
       return;
     }
 
@@ -460,10 +544,14 @@ function App() {
     setTranscribeQueue(remaining);
 
     if (job) {
-      const completed = { ...job, status: 'completed', progress: 100, transcript: text };
+      const completed = { ...job, status: 'completed', progress: 100, transcript: finalText };
       setCompletedTranscriptions(prev => [...prev, completed]);
-      setTranscription(text); // Keep latest transcript accessible to other tabs
-      saveToHistory(`Transcription - ${job.name}`, text, 'transcription', selectedModel);
+      setTranscription(text); // Handle legacy "last transcription" state? Or maybe this should be finalText too? 
+      // If we are in File mode, sidebar doesn't show "Live Output". It shows the list.
+      // But if we switch to Notes, we want the text.
+      // Let's keep original text in global state for Notes fallback, but the completed item has translated.
+
+      saveToHistory(`Transcription - ${job.name}`, finalText, 'transcription', selectedModel);
     }
 
     activeJobRef.current = null;
@@ -649,7 +737,7 @@ function App() {
         setStatus('idle');
       }, 30000);
 
-      window.chrome.runtime.sendMessage(EXTENSION_ID, {
+      window.chrome.runtime.sendMessage(extensionId, {
         action: "transcribe_url",
         url: tab.url,
         // We can pass tabId if extension needs it to focus/highlight
@@ -670,7 +758,21 @@ function App() {
         if (res && res.type === 'TRANSCRIPT') {
           // Success
           console.log("[RapidTranscribe] Transcription success:", res.text.substring(0, 50) + "...");
+
           setTranscription(res.text);
+
+          // Explicitly translate if enabled
+          if (translationEnabled && translatorReady) {
+            setTranslationStatus(`Translating...`); // Optional UI feedback
+            translator.translate(res.text).then(translated => {
+              setTranslatedText(translated);
+              setTranslationStatus('Translated');
+            }).catch(err => {
+              console.error("Rapid translation failed", err);
+              setTranslationStatus('Error');
+            });
+          }
+
           setStatus('idle');
           alert(`Transcription Complete for: ${tab.title}`);
         } else if (res && (res.error || res.type === 'ERROR')) {
@@ -723,7 +825,7 @@ function App() {
 
       // Get list of open tabs (doesn't need native host)
       const msg = { action: "GET_TABS" };
-      window.chrome.runtime.sendMessage(EXTENSION_ID, msg, (response) => {
+      window.chrome.runtime.sendMessage(extensionId, msg, (response) => {
         clearTimeout(timeoutId);
         setTabsLoading(false);
 
@@ -759,9 +861,9 @@ function App() {
 
     // Handle Mute Logic if toggle is on
     if (backgroundMuted && window.chrome && window.chrome.runtime) {
-      window.chrome.runtime.sendMessage(EXTENSION_ID, { action: "GET_ACTIVE_TAB_INFO" }, (response) => {
+      window.chrome.runtime.sendMessage(extensionId, { action: "GET_ACTIVE_TAB_INFO" }, (response) => {
         if (response && response.success) {
-          window.chrome.runtime.sendMessage(EXTENSION_ID, {
+          window.chrome.runtime.sendMessage(extensionId, {
             action: "MUTE_TAB",
             tabId: response.tabId,
             muted: true
@@ -789,7 +891,7 @@ function App() {
       if (nativeHostConnected && window.chrome && window.chrome.runtime) {
         try {
           console.log("Starting Live System Transcription via Native Host...");
-          const port = window.chrome.runtime.connect(EXTENSION_ID, { name: "resonote-stream" });
+          const port = window.chrome.runtime.connect(extensionId, { name: "resonote-stream" });
 
           // Store port in a ref to clean up later
           if (!window.extensionPortRef) window.extensionPortRef = {}; // specific ref?
@@ -1092,6 +1194,13 @@ function App() {
         onLogout={logout}
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
+        translationEnabled={translationEnabled}
+        setTranslationEnabled={setTranslationEnabled}
+        targetLang={targetLang}
+        setTargetLang={setTargetLang}
+        translationStatus={translationStatus}
+        translationProgress={translationProgress}
+        translatorReady={translatorReady}
       />
 
       {isSidebarOpen && (
@@ -1274,8 +1383,15 @@ function App() {
                     </div>
 
                     {liveSubTab === 'transcript' && (
-                      <div className="output" id="transcript">
-                        {transcription || <span style={{ color: 'var(--gray)', fontStyle: 'italic' }}>Waiting for speech...</span>}
+                      <div className="output-split-container" style={{ display: 'flex', gap: '16px', height: '100%' }}>
+                        <div className="output" id="transcript" style={{ flex: 1 }}>
+                          {transcription || <span style={{ color: 'var(--gray)', fontStyle: 'italic' }}>Waiting for speech...</span>}
+                        </div>
+                        {translationEnabled && (
+                          <div className="output translated-output" style={{ flex: 1, borderLeft: '1px solid #eee', paddingLeft: '16px', background: '#f9f9f9' }}>
+                            {translatedText || <span style={{ color: 'var(--gray)', fontStyle: 'italic' }}>Translation...</span>}
+                          </div>
+                        )}
                       </div>
                     )}
                     {liveSubTab === 'notes' && (
@@ -1423,9 +1539,20 @@ function App() {
                     </div>
 
                     {outputSubTab === 'transcript' && (
-                      <div className="output" id="transcript">
-                        {transcription || "Your background transcription will appear here..."}
-                      </div>
+                      <>
+                        {/* Original Text - Hide if translation enabled (per request) */}
+                        {!translationEnabled && (
+                          <div className="output" id="transcript">
+                            {transcription || "Your background transcription will appear here..."}
+                          </div>
+                        )}
+                        {/* Translated Text - Show if enabled */}
+                        {translationEnabled && (
+                          <div className="output translated-output" style={{ background: '#f9f9f9', padding: '16px', borderRadius: '8px', border: '1px solid #eee' }}>
+                            {translatedText || <span style={{ color: 'var(--gray)', fontStyle: 'italic' }}>Translation...</span>}
+                          </div>
+                        )}
+                      </>
                     )}
                     {outputSubTab === 'notes' && (
                       <div

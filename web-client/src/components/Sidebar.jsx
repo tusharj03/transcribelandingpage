@@ -1,6 +1,12 @@
 import React from 'react';
 
-const Sidebar = ({ activeTab, setActiveTab, onRapidTranscribe, user, onLogin, onLogout, isOpen, onClose }) => {
+const Sidebar = ({
+    activeTab, setActiveTab, onRapidTranscribe,
+    user, onLogin, onLogout, isOpen, onClose,
+    translationEnabled, setTranslationEnabled,
+    targetLang, setTargetLang,
+    translationStatus, translationProgress, translatorReady
+}) => {
     return (
         <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
             <button className="sidebar-close-btn" onClick={onClose}>
@@ -67,6 +73,48 @@ const Sidebar = ({ activeTab, setActiveTab, onRapidTranscribe, user, onLogin, on
             </nav>
 
             <div className="sidebar-footer">
+                {/* Language Selector */}
+                <div className="language-selector-container" style={{ marginBottom: '16px', padding: '0 16px' }}>
+                    <div style={{ fontSize: '12px', color: 'var(--gray)', marginBottom: '4px', display: 'flex', justifyContent: 'space-between' }}>
+                        <span>Language</span>
+                        {translationEnabled && !translatorReady && (
+                            <span style={{ fontSize: '10px' }}>{translationStatus} ({Math.round(translationProgress)}%)</span>
+                        )}
+                    </div>
+                    <select
+                        className="language-dropdown"
+                        value={translationEnabled ? targetLang : 'default'}
+                        onChange={(e) => {
+                            if (e.target.value === 'default') {
+                                setTranslationEnabled(false);
+                            } else {
+                                setTranslationEnabled(true);
+                                setTargetLang(e.target.value);
+                            }
+                        }}
+                        style={{
+                            width: '100%',
+                            padding: '8px',
+                            borderRadius: '8px',
+                            border: '1px solid var(--gray-light)',
+                            fontSize: '14px',
+                            background: 'white',
+                            color: 'var(--text-primary)'
+                        }}
+                    >
+                        <option value="default">Default</option>
+                        <option value="en">English</option>
+                        <option value="es">Spanish (Español)</option>
+                        <option value="fr">French (Français)</option>
+                        <option value="de">German (Deutsch)</option>
+                        <option value="it">Italian (Italiano)</option>
+                        <option value="pt">Portuguese (Português)</option>
+                        <option value="zh">Chinese (中文)</option>
+                        <option value="ja">Japanese (日本語)</option>
+                        <option value="ru">Russian (Русский)</option>
+                    </select>
+                </div>
+
                 {user && user.authenticated ? (
                     <div className="user-profile-card">
                         <div className="user-avatar">

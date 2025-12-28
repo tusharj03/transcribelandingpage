@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { marked } from 'marked';
 
 const ChatTab = ({ currentTranscription, user, onLoginRequest }) => {
     // State
@@ -157,7 +158,7 @@ const ChatTab = ({ currentTranscription, user, onLoginRequest }) => {
                         {messages.map((msg, idx) => (
                             <div key={idx} className={`chat-message ${msg.role === 'user' ? 'user' : 'bot'}`}>
                                 <div className="message-content">
-                                    {msg.content}
+                                    <div dangerouslySetInnerHTML={{ __html: marked.parse(msg.content) }} />
                                 </div>
                             </div>
                         ))}
