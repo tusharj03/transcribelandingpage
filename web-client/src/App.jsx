@@ -4,6 +4,7 @@ import './index.css';
 import HistoryTab, { saveToHistory } from './components/HistoryTab';
 import AINotesTab from './components/AINotesTab';
 import ChatTab from './components/ChatTab';
+import Sidebar from './components/Sidebar';
 import { useAuth } from './hooks/useAuth';
 import { useLiveNotes } from './hooks/useLiveNotes';
 import { useLiveAssist } from './hooks/useLiveAssist';
@@ -11,6 +12,123 @@ import { marked } from 'marked';
 
 // We'll use FontAwesome for icons by adding the CDN link in index.html, 
 // matching the original app.
+
+// ===============================
+// 🔌 Universal Native Host Client
+// ===============================
+class NativeHostClient {
+  constructor() {
+    this.mode = 'extension'; // 'extension' | 'websocket'
+    this.ws = null;
+    this.wsPort = 3000;
+    this.extensionId = 'lamboikcmffdoaolbcdadahfbejjcioe';
+    this.isConnected = false;
+  }
+
+  async connect() {
+    // 1. Try Chrome Extension first
+    if (window.chrome && window.chrome.runtime && window.chrome.runtime.sendMessage) {
+      try {
+        const response = await new Promise((resolve) => {
+          // Timeout for extension check
+          const pid = setTimeout(() => resolve(null), 1000);
+          try {
+            window.chrome.runtime.sendMessage(this.extensionId, { action: 'ping' }, (res) => {
+              clearTimeout(pid);
+              if (window.chrome.runtime.lastError) resolve(null);
+              else resolve(res);
+            });
+          } catch (e) { clearTimeout(pid); resolve(null); }
+        });
+
+        if (response && response.type === 'PONG') {
+          console.log("✅ Native Host connected via Chrome Extension");
+          this.mode = 'extension';
+          this.isConnected = true;
+          return true;
+        }
+      } catch (e) {
+        console.log("Extension check failed, trying WebSocket...");
+      }
+    }
+
+    // 2. Fallback to WebSocket (Safari, Firefox, Standalone)
+    return this.connectWebSocket();
+  }
+
+  connectWebSocket() {
+    return new Promise((resolve) => {
+      try {
+        console.log("🔄 Attempting WebSocket connection to Native Host...");
+        const socket = new WebSocket(`ws://localhost:${this.wsPort}`);
+        this.ws = socket;
+
+        socket.onopen = () => {
+          console.log("✅ Native Host connected via WebSocket (Universal Mode)");
+          this.mode = 'websocket';
+          this.isConnected = true;
+          // Send initial ping to verify plumbing, using EXPLICIT socket to avoid race
+          this.sendMessage({ action: 'ping' }, (res) => {
+            console.log("WS Ping valid:", res);
+            resolve(true);
+          }, socket);
+        };
+
+        this.ws.onerror = (err) => {
+          console.warn("❌ WebSocket connection failed:", err);
+          this.isConnected = false;
+          resolve(false);
+        };
+
+        this.ws.onmessage = (event) => {
+          // Handled by request callbacks usually, but here we might need a global listener if we support push
+          // For now, simpler request-response pattern validation
+        };
+
+      } catch (e) {
+        console.error("WS Setup error:", e);
+        resolve(false);
+      }
+    });
+  }
+
+  sendMessage(message, callback, explicitSocket = null) {
+    if (this.mode === 'extension') {
+      if (window.chrome && window.chrome.runtime) {
+        window.chrome.runtime.sendMessage(this.extensionId, message, callback);
+      } else {
+        callback({ type: 'ERROR', message: 'Extension API unavailable' });
+      }
+    } else if (this.mode === 'websocket') {
+      const targetWs = explicitSocket || this.ws;
+      if (targetWs && targetWs.readyState === WebSocket.OPEN) {
+        // Simple One-Off Implementation:
+        const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        message.requestId = requestId;
+
+        const listener = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            if (data.requestId === requestId || (data.type === 'PONG' && message.action === 'ping')) {
+              targetWs.removeEventListener('message', listener);
+              callback(data);
+            }
+          } catch (e) { /* ignore */ }
+        };
+        targetWs.addEventListener('message', listener);
+        targetWs.send(JSON.stringify(message));
+      } else {
+        const state = targetWs ? targetWs.readyState : 'null';
+        console.warn(`WS Not Open. State: ${state}, Explicit: ${!!explicitSocket}`);
+        callback({ type: 'ERROR', message: 'WebSocket not connected' });
+      }
+    } else {
+      callback({ type: 'ERROR', message: 'No connection mode active' });
+    }
+  }
+}
+
+const nativeClient = new NativeHostClient();
 
 function App() {
   // Tabs State
@@ -186,31 +304,23 @@ function App() {
     return () => clearTimeout(timer);
   }, [nativeHostConnected]);
 
+  // Debug State
+  useEffect(() => {
+    console.log("👉 Native Host State Changed:", nativeHostConnected);
+  }, [nativeHostConnected]);
+
   // Check Native Host Connection
   useEffect(() => {
-    const checkConnection = () => {
-      if (window.chrome && window.chrome.runtime && window.chrome.runtime.sendMessage) {
-        // We can't know for sure if the extension allows us, but we try.
-        // Also the extension must accept external messages and forward 'ping' to native host.
-        try {
-          window.chrome.runtime.sendMessage(EXTENSION_ID, { action: 'ping' }, (response) => {
-            if (window.chrome.runtime.lastError) {
-              console.log('Native Host Check: Not found or error', window.chrome.runtime.lastError);
-              setNativeHostConnected(false);
-            } else if (response && response.type === 'PONG') {
-              console.log('Native Host Check: Connected!', response);
-              setNativeHostConnected(true);
-            }
-          });
-        } catch (e) {
-          console.error("Failed to send message to extension", e);
-        }
-      }
+    const checkConnection = async () => {
+      console.log("🕵️‍♂️ Checking connection...");
+      const connected = await nativeClient.connect();
+      console.log("🕵️‍♂️ Connection Result:", connected);
+      setNativeHostConnected(!!connected);
     };
 
-    // Check immediately and maybe every few seconds? Just once for now.
+    // Check immediately
     checkConnection();
-    // Retry once after 2 seconds in case extension loads late?
+    // Retry once after 2 seconds
     setTimeout(checkConnection, 2000);
   }, []);
 
@@ -296,7 +406,7 @@ function App() {
     queueRef.current = updatedQueue;
     setTranscribeQueue(updatedQueue);
 
-    if (nativeHostConnected && window.chrome && window.chrome.runtime) {
+    if (nativeHostConnected) {
       // Native Host Path
       console.log("Transcribing file via Native Host...");
       const reader = new FileReader();
@@ -308,14 +418,14 @@ function App() {
         // Map model name for Native Host (whisper.cpp)
         const nativeModel = selectedModel === 'small' ? 'ggml-small.bin' : 'ggml-base.bin';
 
-        window.chrome.runtime.sendMessage(EXTENSION_ID, {
+        nativeClient.sendMessage({
           action: 'transcribe_audio',
           audioData: base64data,
           model: nativeModel,
           language: 'en'
         }, (response) => {
-          if (window.chrome.runtime.lastError || !response || response.type === 'ERROR') {
-            console.warn("Native Host Transcription Failed, falling back to worker:", window.chrome.runtime.lastError || response);
+          if (!response || response.type === 'ERROR') {
+            console.warn("Native Host Transcription Failed, falling back to worker:", response);
             // Fallback to worker
             processWithWorker(nextJob);
           } else if (response.type === 'TRANSCRIPT') {
@@ -969,635 +1079,606 @@ function App() {
   const safeDownloadProgress = Math.max(0, Math.min(100, downloadProgress || 0));
 
   return (
-    <div className="container">
+    <div className="app-layout">
+      <Sidebar
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        onRapidTranscribe={handleRapidTranscribeClick}
+        user={user}
+        onLogin={() => setShowLoginModal(true)}
+        onLogout={logout}
+      />
 
-      {/* Header */}
-      <header style={{ position: 'relative' }}>
+      <main className="main-content">
         {nativeHostConnected && (
-          <div className="native-badge-left" style={{
-            position: 'absolute',
-            top: '20px',
-            left: '20px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            padding: '6px 12px',
-            background: 'rgba(34, 197, 94, 0.1)',
-            color: '#16a34a',
-            borderRadius: '20px',
-            fontSize: '0.85rem',
-            fontWeight: '500',
-            zIndex: 10
-          }}>
+          <div className="native-badge-inline">
             <i className="fas fa-check-circle"></i> Native App Connected
           </div>
         )}
-        <div className="header">
-          <div className="logo">
-            <img src="/icons/resonote1795x512.png" alt="Resonote Logo" style={{ width: '260px', height: 'auto', display: 'block', margin: '0 auto 10px' }} />
-          </div>
 
+        <div className="dashboard-header">
+          <h1>
+            {activeTab === 'transcribe' && 'Transcription Studio'}
+            {activeTab === 'history' && 'History'}
+            {activeTab === 'notes' && 'AI Notes'}
+            {activeTab === 'chat' && 'AI Chat Assistant'}
+          </h1>
+          <p className="subtitle-sm">
+            {activeTab === 'transcribe' ? 'Convert audio, video, and screen recordings to text with AI.' :
+              activeTab === 'history' ? 'View and manage your past transcriptions.' :
+                activeTab === 'notes' ? ' Organize your thoughts with AI-generated notes.' :
+                  'Chat with your transcriptions to get answers.'}
+          </p>
         </div>
-        <div className="header-actions">
 
-          {user && user.authenticated ? (
-            <>
-              <div id="userInfo" className="user-info">
-                <span className="user-email">{user.email || 'User'}</span>
-                {/* <span className="user-plan">{user.plan}</span> */}
-              </div>
-              <button id="logoutBtn" className="btn btn-outline logout-btn" onClick={logout}>
-                <i className="fas fa-sign-out-alt"></i> Log Out
-              </button>
-            </>
-          ) : (
-            !showLoginModal && (
-              <button className="btn btn-primary" onClick={() => setShowLoginModal(true)}>
-                <i className="fas fa-user-circle"></i> Login
-              </button>
-            )
-          )}
-        </div>
-        <p className="subtitle">Convert audio, video, and screen recordings to text with AI-powered transcription</p>
-      </header>
-
-      {/* Tabs */}
-      <div className="tabs">
-        <button className={`tab-btn ${activeTab === 'transcribe' ? 'active' : ''}`} onClick={() => setActiveTab('transcribe')}>Transcribe</button>
-        <button className={`tab-btn ${activeTab === 'history' ? 'active' : ''}`} onClick={() => setActiveTab('history')}>History</button>
-        <button className={`tab-btn ${activeTab === 'notes' ? 'active' : ''}`} onClick={() => setActiveTab('notes')}>AI Notes</button>
-        <button className={`tab-btn ${activeTab === 'chat' ? 'active' : ''}`} onClick={() => setActiveTab('chat')}>Chat</button>
-      </div>
-
-      {/* Transcribe Content */}
-      {activeTab === 'transcribe' && (
-        <div className="tab-content active">
-          <div className="card">
-            <div className="card-header">
-              <div className="card-title">
-                <i className="fas fa-microphone-alt"></i> Transcription Mode
-              </div>
-              <div className="transcription-categories">
-                <button className={`category-btn ${transcribeCategory === 'live' ? 'active' : ''}`} onClick={() => setTranscribeCategory('live')}>
-                  <i className="fas fa-microphone"></i> Live
-                </button>
-                <button className={`category-btn ${transcribeCategory === 'background' ? 'active' : ''}`} onClick={() => setTranscribeCategory('background')}>
-                  <i className="fas fa-desktop"></i> Background
-                </button>
-                <button className={`category-btn ${transcribeCategory === 'file' ? 'active' : ''}`} onClick={() => setTranscribeCategory('file')}>
-                  <i className="fas fa-upload"></i> File
-                </button>
-              </div>
-            </div>
-
-            {/* LIVE CATEGORY */}
-            {transcribeCategory === 'live' && (
-              <div className="category-content active">
-
-                {/* 1. Audio Source Selector (Big & Prominent) */}
-                <div className="audio-source-section" style={{ marginBottom: '30px' }}>
-                  <label style={{ display: 'block', marginBottom: '10px', fontSize: '14px', fontWeight: '600', color: 'var(--gray)' }}>Select Audio Source</label>
-                  <div className="source-buttons-large" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
-                    <button
-                      className={`source-btn-lg ${transcriptionSource === 'tab' ? 'active' : ''}`}
-                      onClick={() => setTranscriptionSource('tab')}
-                      style={{
-                        padding: '20px',
-                        border: '2px solid var(--gray-light)',
-                        borderRadius: '16px',
-                        background: transcriptionSource === 'tab' ? 'var(--primary-light)' : 'white',
-                        borderColor: transcriptionSource === 'tab' ? 'var(--primary)' : 'var(--gray-light)',
-                        color: transcriptionSource === 'tab' ? 'var(--primary-dark)' : 'var(--gray)',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease',
-                        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px'
-                      }}
-                    >
-                      <i className="fas fa-desktop" style={{ fontSize: '24px' }}></i>
-                      <span style={{ fontWeight: '600' }}>Tab Audio</span>
-                    </button>
-
-                    <button
-                      className={`source-btn-lg ${transcriptionSource === 'mic' ? 'active' : ''}`}
-                      onClick={() => setTranscriptionSource('mic')}
-                      style={{
-                        padding: '20px',
-                        border: '2px solid var(--gray-light)',
-                        borderRadius: '16px',
-                        background: transcriptionSource === 'mic' ? 'var(--primary-light)' : 'white',
-                        borderColor: transcriptionSource === 'mic' ? 'var(--primary)' : 'var(--gray-light)',
-                        color: transcriptionSource === 'mic' ? 'var(--primary-dark)' : 'var(--gray)',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease',
-                        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px'
-                      }}
-                    >
-                      <i className="fas fa-microphone" style={{ fontSize: '24px' }}></i>
-                      <span style={{ fontWeight: '600' }}>Microphone</span>
-                    </button>
-
-                    <button
-                      className={`source-btn-lg ${transcriptionSource === 'system' ? 'active' : ''}`}
-                      onClick={() => setTranscriptionSource('system')}
-                      style={{
-                        padding: '20px',
-                        border: '2px solid var(--gray-light)',
-                        borderRadius: '16px',
-                        background: transcriptionSource === 'system' ? 'var(--primary-light)' : 'white',
-                        borderColor: transcriptionSource === 'system' ? 'var(--primary)' : 'var(--gray-light)',
-                        color: transcriptionSource === 'system' ? 'var(--primary-dark)' : 'var(--gray)',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease',
-                        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px'
-                      }}
-                    >
-                      <i className="fas fa-volume-up" style={{ fontSize: '24px' }}></i>
-                      <span style={{ fontWeight: '600' }}>System</span>
-                    </button>
-                  </div>
+        {/* Transcribe Content */}
+        {activeTab === 'transcribe' && (
+          <div className="tab-content active">
+            <div className="card">
+              <div className="card-header">
+                <div className="card-title">
+                  <i className="fas fa-microphone-alt"></i> Transcription Mode
                 </div>
-
-                {/* 2. Controls & Timer */}
-                <div className="live-controls" style={{ textAlign: 'center', marginBottom: '30px' }}>
-                  {status === 'recording' && (
-                    <div className="live-timer" style={{ fontSize: '2.5rem', fontWeight: '700', fontFamily: 'monospace', color: 'var(--dark)', marginBottom: '20px', letterSpacing: '-1px' }}>
-                      {recordingTime}
-                    </div>
-                  )}
-
-                  <div className="action-buttons-enhanced" style={{ display: 'flex', justifyContent: 'center' }}>
-                    {status === 'recording' ? (
-                      <button className="btn btn-danger btn-xl" onClick={stopRecording} style={{ padding: '16px 40px', fontSize: '18px', borderRadius: '30px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <i className="fas fa-stop"></i> Stop & Transcribe
-                      </button>
-                    ) : status === 'transcribing' ? (
-                      <button className="btn btn-outline btn-xl" disabled style={{ padding: '16px 40px', fontSize: '18px', borderRadius: '30px', display: 'flex', alignItems: 'center', gap: '12px', cursor: 'wait' }}>
-                        <i className="fas fa-spinner fa-spin"></i> Processing...
-                      </button>
-                    ) : (
-                      <button className="btn btn-primary btn-xl" onClick={() => {
-                        if (transcriptionSource === 'mic') startMicrophoneRecording();
-                        else startSystemAudioRecording();
-                      }} style={{ padding: '16px 40px', fontSize: '18px', borderRadius: '30px', display: 'flex', alignItems: 'center', gap: '12px', boxShadow: '0 4px 14px rgba(37, 99, 235, 0.4)' }}>
-                        <i className="fas fa-record-vinyl"></i>
-                        {transcriptionSource === 'mic' ? 'Start Recording' : 'Start Capture'}
-                      </button>
-                    )}
-                  </div>
-
-                  {status === 'idle' && (
-                    <div className="status-hint" style={{ marginTop: '16px', color: 'var(--gray)', fontSize: '14px' }}>
-                      <i className="fas fa-info-circle"></i> Ready to capture high-quality audio
-                    </div>
-                  )}
-                </div>
-
-                {/* 3. Output Container */}
-                <div className="output-container" style={{ marginBottom: '16px', minHeight: '300px' }}>
-                  <div className="output-header" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '12px' }}>
-                    <div className="output-header-top" style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
-                      <div className="output-header-left">
-                        <div className="output-title"><i className="fas fa-file-alt"></i> Live Output</div>
-                      </div>
-                      <div className="output-actions">
-                        <button className="btn btn-outline" onClick={() => handleDownloadTxt(transcription)}><i className="fas fa-download"></i></button>
-                      </div>
-                    </div>
-
-                    {/* Subtabs moved here */}
-                    <div className="output-subtabs" style={{ display: 'flex', gap: '4px', background: 'var(--gray-light)', padding: '4px', borderRadius: '8px', width: 'fit-content' }}>
-                      <button
-                        className={`sub-tab-btn ${liveSubTab === 'transcript' ? 'active' : ''}`}
-                        onClick={() => setLiveSubTab('transcript')}
-                        style={{ padding: '6px 16px', fontSize: '13px', borderRadius: '6px', border: 'none' }}
-                      >
-                        Transcript
-                      </button>
-                      <button
-                        className={`sub-tab-btn ${liveSubTab === 'notes' ? 'active' : ''}`}
-                        onClick={() => setLiveSubTab('notes')}
-                        style={{ padding: '6px 16px', fontSize: '13px', borderRadius: '6px', border: 'none' }}
-                      >
-                        Notes
-                      </button>
-                      <button
-                        className={`sub-tab-btn ${liveSubTab === 'assist' ? 'active' : ''}`}
-                        onClick={() => setLiveSubTab('assist')}
-                        style={{ padding: '6px 16px', fontSize: '13px', borderRadius: '6px', border: 'none' }}
-                      >
-                        Assist
-                      </button>
-                    </div>
-                  </div>
-
-                  {liveSubTab === 'transcript' && (
-                    <div className="output" id="transcript">
-                      {transcription || <span style={{ color: 'var(--gray)', fontStyle: 'italic' }}>Waiting for speech...</span>}
-                    </div>
-                  )}
-                  {liveSubTab === 'notes' && (
-                    <div
-                      id="liveNotes"
-                      className="flex-1 overflow-y-auto p-4 text-sm text-[var(--text-secondary)]"
-                    >
-                      {liveNotes ? (
-                        <div dangerouslySetInnerHTML={{ __html: marked.parse(liveNotes) }} />
-                      ) : (
-                        <div style={{ textAlign: 'center', padding: '40px', color: 'var(--gray)' }}>
-                          <i className="fas fa-sticky-note" style={{ fontSize: '32px', marginBottom: '12px', opacity: 0.5 }}></i>
-                          <p>Live notes will appear here automatically.</p>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  {liveSubTab === 'assist' && (
-                    <div className="chat-container live-chat-container">
-                      <div className="chat-messages" ref={(el) => { if (el) el.scrollTop = el.scrollHeight; }}>
-                        {assistMessages.map((msg, idx) => (
-                          <div key={idx} className={`message ${msg.role}`}>
-                            {msg.content}
-                          </div>
-                        ))}
-                        {assistLoading && <div className="message assistant"><i className="fas fa-spinner fa-spin"></i></div>}
-                      </div>
-                      <div className="chat-input-container">
-                        <textarea
-                          className="chat-input"
-                          placeholder="Ask about the live context..."
-                          rows="1"
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' && !e.shiftKey) {
-                              e.preventDefault();
-                              sendAssistMessage(e.target.value);
-                              e.target.value = '';
-                            }
-                          }}
-                        ></textarea>
-                        <button className="send-button" onClick={(e) => {
-                          const input = e.target.previousSibling;
-                          sendAssistMessage(input.value);
-                          input.value = '';
-                        }}><i className="fas fa-paper-plane"></i></button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-              </div>
-            )}
-
-            {/* BACKGROUND CATEGORY */}
-            {transcribeCategory === 'background' && (
-              <div className="category-content active">
-                <div className="background-info" style={{ marginBottom: '16px' }}>
-                  <div className="info-box" style={{ background: 'var(--primary-light)', padding: '12px', borderRadius: '8px', color: 'var(--primary-dark)', display: 'flex', gap: '8px', fontSize: '13px' }}>
-                    <i className="fas fa-info-circle"></i>
-                    <p style={{ margin: 0 }}>Using the external tab lets you close this window during long-running sessions.</p>
-                  </div>
-                </div>
-
-                <div className="mute-toggle">
-                  <label className="toggle-label">
-                    <input type="checkbox" checked={backgroundMuted} onChange={(e) => setBackgroundMuted(e.target.checked)} />
-                    <span className="toggle-slider"></span>
-                    Mute tab during background transcription
-                  </label>
-                </div>
-
-                <div className="background-action-buttons" style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
-                  {status === 'recording' ? (
-                    <button className="btn btn-outline" onClick={stopRecording} style={{ flex: 1 }}>
-                      <i className="fas fa-stop"></i> Stop & Transcribe
-                    </button>
-                  ) : status === 'transcribing' ? (
-                    <button className="btn btn-outline" disabled style={{ flex: 1, cursor: 'wait' }}>
-                      <i className="fas fa-spinner fa-spin"></i> Processing Audio...
-                    </button>
-                  ) : (
-                    <>
-                      <button className="btn btn-primary" onClick={() => {
-                        if (transcriptionSource === 'mic') startMicrophoneRecording();
-                        else startSystemAudioRecording();
-                      }} style={{ flex: 1 }}>
-                        <i className="fas fa-record-vinyl"></i> Start Capture
-                      </button>
-                      <button className="btn btn-rapid" style={{ background: 'var(--rapid)', color: 'white', cursor: 'pointer', flex: 1 }} onClick={handleRapidTranscribeClick}>
-                        <i className="fas fa-bolt"></i> Rapid Transcribe
-                      </button>
-                    </>
-                  )}
-                </div>
-
-                <div className="output-container" style={{ marginBottom: '16px', minHeight: '300px' }}>
-                  <div className="output-header" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '12px' }}>
-                    <div className="output-header-top" style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
-                      <div className="output-header-left">
-                        <div className="output-title"><i className="fas fa-file-alt"></i> Background Output</div>
-                      </div>
-                      <div className="output-actions">
-                        <button className="btn btn-outline" onClick={() => handleDownloadTxt(transcription)}><i className="fas fa-download"></i></button>
-                      </div>
-                    </div>
-
-                    {/* Subtabs */}
-                    <div className="output-subtabs" style={{ display: 'flex', gap: '4px', background: 'var(--gray-light)', padding: '4px', borderRadius: '8px', width: 'fit-content' }}>
-                      <button
-                        className={`sub-tab-btn ${outputSubTab === 'transcript' ? 'active' : ''}`}
-                        onClick={() => setOutputSubTab('transcript')}
-                        style={{ padding: '6px 16px', fontSize: '13px', borderRadius: '6px', border: 'none' }}
-                      >
-                        Transcript
-                      </button>
-                      <button
-                        className={`sub-tab-btn ${outputSubTab === 'notes' ? 'active' : ''}`}
-                        onClick={() => setOutputSubTab('notes')}
-                        style={{ padding: '6px 16px', fontSize: '13px', borderRadius: '6px', border: 'none' }}
-                      >
-                        Notes
-                      </button>
-                      <button
-                        className={`sub-tab-btn ${outputSubTab === 'assist' ? 'active' : ''}`}
-                        onClick={() => setOutputSubTab('assist')}
-                        style={{ padding: '6px 16px', fontSize: '13px', borderRadius: '6px', border: 'none' }}
-                      >
-                        Assist
-                      </button>
-                    </div>
-                  </div>
-
-                  {outputSubTab === 'transcript' && (
-                    <div className="output" id="transcript">
-                      {transcription || "Your background transcription will appear here..."}
-                    </div>
-                  )}
-                  {outputSubTab === 'notes' && (
-                    <div
-                      id="liveNotes"
-                      className="flex-1 overflow-y-auto p-4 text-sm text-[var(--text-secondary)]"
-                    >
-                      {liveNotes ? (
-                        <div dangerouslySetInnerHTML={{ __html: marked.parse(liveNotes) }} />
-                      ) : (
-                        <div style={{ textAlign: 'center', padding: '40px', color: 'var(--gray)' }}>
-                          <i className="fas fa-sticky-note" style={{ fontSize: '32px', marginBottom: '12px', opacity: 0.5 }}></i>
-                          <p>Notes will appear here automatically.</p>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  {outputSubTab === 'assist' && (
-                    <div className="chat-container live-chat-container">
-                      <div className="chat-messages" ref={(el) => { if (el) el.scrollTop = el.scrollHeight; }}>
-                        {assistMessages.map((msg, idx) => (
-                          <div key={idx} className={`message ${msg.role}`}>
-                            {msg.content}
-                          </div>
-                        ))}
-                        {assistLoading && <div className="message assistant"><i className="fas fa-spinner fa-spin"></i></div>}
-                      </div>
-                      <div className="chat-input-container">
-                        <textarea
-                          className="chat-input"
-                          placeholder="Ask about the background context..."
-                          rows="1"
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' && !e.shiftKey) {
-                              e.preventDefault();
-                              sendAssistMessage(e.target.value);
-                              e.target.value = '';
-                            }
-                          }}
-                        ></textarea>
-                        <button className="send-button" onClick={(e) => {
-                          const input = e.target.previousSibling;
-                          sendAssistMessage(input.value);
-                          input.value = '';
-                        }}><i className="fas fa-paper-plane"></i></button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* FILE CATEGORY (Formerly Upload) */}
-            {transcribeCategory === 'file' && (
-              <div className="category-content active">
-                {/* Workflow visual (static) */}
-                <div className="transcription-workflow">
-                  <div className="workflow-step">
-                    <div className="step-number">1</div>
-                    <h3>Choose Files</h3>
-                  </div>
-                  <div className="workflow-step">
-                    <div className="step-number">2</div>
-                    <h3>Select Model</h3>
-                  </div>
-                  <div className="workflow-step">
-                    <div className="step-number">3</div>
-                    <h3>Transcribe</h3>
-                  </div>
-                  <div className="workflow-step">
-                    <div className="step-number">4</div>
-                    <h3>Get Results</h3>
-                  </div>
-                </div>
-
-                {/* Drop Zone */}
-                <div className="drop-zone-enhanced"
-                  onClick={() => document.getElementById('fileInput').click()}
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    handleFileSelect({ target: { files: e.dataTransfer.files } });
-                  }}
-                >
-                  <i className="fas fa-cloud-upload-alt drop-icon"></i>
-                  <p className="drop-text">Click or Drop Files Here</p>
-                  <p className="drop-subtext">Supports MP3, WAV, M4A, etc.</p>
-                  <input type="file" id="fileInput" className="file-input" accept="audio/*,video/*" multiple onChange={handleFileSelect} />
-                </div>
-
-                {/* File List */}
-                <div className="file-list-enhanced">
-                  {transcribeFiles.map((f, i) => (
-                    <div key={i} className="file-item-enhanced">
-                      <div className="file-icon-enhanced"><i className="fas fa-file-audio"></i></div>
-                      <div className="file-info-enhanced">
-                        <div className="file-name-enhanced">{f.name}</div>
-                        <div className="file-size-enhanced">{(f.size / 1024 / 1024).toFixed(2)} MB</div>
-                      </div>
-                      <button className="remove-file" onClick={() => removeFile(i)}><i className="fas fa-times"></i></button>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Model Selector */}
-                <div className="model-selector-enhanced">
-                  <h3 className="section-title"><i className="fas fa-brain"></i> AI Model</h3>
-                  <div className="model-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
-
-
-
-                    <div className={`model-card ${selectedModel === 'base' ? 'selected' : ''}`} onClick={() => switchModel('base')}>
-                      <div className="model-header">
-                        <div className="model-icon-wrapper">
-                          <i className="fas fa-balance-scale model-icon"></i>
-                        </div>
-                        <div className="model-title-group">
-                          <h4 className="model-name">Base</h4>
-                          <span className="model-badge">Balanced</span>
-                        </div>
-                        {selectedModel === 'base' && <i className="fas fa-check-circle" style={{ color: 'var(--primary)' }}></i>}
-                      </div>
-                      <div className="model-info">
-                        <p className="model-desc">Good balance. Recommended for most general use cases.</p>
-                        <div className="model-tags">
-                          <span className="tag speed">Med Speed</span>
-                          <span className="tag accuracy">Good Accuracy</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className={`model-card ${selectedModel === 'small' ? 'selected' : ''}`} onClick={() => switchModel('small')}>
-                      <div className="model-header">
-                        <div className="model-icon-wrapper">
-                          <i className="fas fa-crown model-icon"></i>
-                        </div>
-                        <div className="model-title-group">
-                          <h4 className="model-name">Small</h4>
-                          <span className="model-badge">Premium</span>
-                        </div>
-                        {selectedModel === 'small' && <i className="fas fa-check-circle" style={{ color: 'var(--primary)' }}></i>}
-                      </div>
-                      <div className="model-info">
-                        <p className="model-desc">High accuracy. Best for professional work and difficult audio.</p>
-                        <div className="model-tags">
-                          <span className="tag speed">Low Speed</span>
-                          <span className="tag accuracy">High Accuracy</span>
-                        </div>
-                      </div>
-                    </div>
-
-                  </div>
-                </div>
-
-                {/* Actions */}
-                <div className="action-buttons-enhanced">
-                  <button className="btn btn-primary btn-large" onClick={startTranscription} disabled={status === 'transcribing' || status === 'loading-model'}>
-                    {status === 'transcribing' ? <i className="fas fa-spinner fa-spin"></i> : <i className="fas fa-play-circle"></i>}
-                    {status === 'transcribing' ? ' Transcribing...' : ' Start Transcription'}
+                <div className="transcription-categories">
+                  <button className={`category-btn ${transcribeCategory === 'live' ? 'active' : ''}`} onClick={() => setTranscribeCategory('live')}>
+                    <i className="fas fa-microphone"></i> Live
+                  </button>
+                  <button className={`category-btn ${transcribeCategory === 'background' ? 'active' : ''}`} onClick={() => setTranscribeCategory('background')}>
+                    <i className="fas fa-desktop"></i> Background
+                  </button>
+                  <button className={`category-btn ${transcribeCategory === 'file' ? 'active' : ''}`} onClick={() => setTranscribeCategory('file')}>
+                    <i className="fas fa-upload"></i> File
                   </button>
                 </div>
+              </div>
 
-                {/* Transcription Results & Queue */}
-                {(transcribeQueue.length > 0 || completedTranscriptions.length > 0) && (
-                  <div className="output-container-enhanced transcription-results-card" style={{ marginTop: '30px' }}>
-                    <div className="output-header">
-                      <div className="output-title"><i className="fas fa-file-alt"></i> Transcription Results</div>
-                      <div className="output-actions">
-                        <button className="btn btn-outline" onClick={() => navigator.clipboard.writeText(transcription)}><i className="fas fa-copy"></i> Copy</button>
-                        <button className="btn btn-outline" onClick={() => handleDownloadTxt(transcription)}><i className="fas fa-download"></i> Download TXT</button>
-                        <button className="btn btn-primary" onClick={() => handleCreateAINotes(transcription)}><i className="fas fa-robot"></i> AI Notes</button>
-                      </div>
+              {/* LIVE CATEGORY */}
+              {transcribeCategory === 'live' && (
+                <div className="category-content active">
+
+                  {/* 1. Audio Source Selector (Big & Prominent) */}
+                  <div className="audio-source-section" style={{ marginBottom: '30px' }}>
+                    <label style={{ display: 'block', marginBottom: '10px', fontSize: '14px', fontWeight: '600', color: 'var(--gray)' }}>Select Audio Source</label>
+                    <div className="source-buttons-large" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+                      <button
+                        className={`source-btn-lg ${transcriptionSource === 'tab' ? 'active' : ''}`}
+                        onClick={() => setTranscriptionSource('tab')}
+                        style={{
+                          padding: '20px',
+                          border: '2px solid var(--gray-light)',
+                          borderRadius: '16px',
+                          background: transcriptionSource === 'tab' ? 'var(--primary-light)' : 'white',
+                          borderColor: transcriptionSource === 'tab' ? 'var(--primary)' : 'var(--gray-light)',
+                          color: transcriptionSource === 'tab' ? 'var(--primary-dark)' : 'var(--gray)',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease',
+                          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px'
+                        }}
+                      >
+                        <i className="fas fa-desktop" style={{ fontSize: '24px' }}></i>
+                        <span style={{ fontWeight: '600' }}>Tab Audio</span>
+                      </button>
+
+                      <button
+                        className={`source-btn-lg ${transcriptionSource === 'mic' ? 'active' : ''}`}
+                        onClick={() => setTranscriptionSource('mic')}
+                        style={{
+                          padding: '20px',
+                          border: '2px solid var(--gray-light)',
+                          borderRadius: '16px',
+                          background: transcriptionSource === 'mic' ? 'var(--primary-light)' : 'white',
+                          borderColor: transcriptionSource === 'mic' ? 'var(--primary)' : 'var(--gray-light)',
+                          color: transcriptionSource === 'mic' ? 'var(--primary-dark)' : 'var(--gray)',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease',
+                          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px'
+                        }}
+                      >
+                        <i className="fas fa-microphone" style={{ fontSize: '24px' }}></i>
+                        <span style={{ fontWeight: '600' }}>Microphone</span>
+                      </button>
+
+                      <button
+                        className={`source-btn-lg ${transcriptionSource === 'system' ? 'active' : ''}`}
+                        onClick={() => setTranscriptionSource('system')}
+                        style={{
+                          padding: '20px',
+                          border: '2px solid var(--gray-light)',
+                          borderRadius: '16px',
+                          background: transcriptionSource === 'system' ? 'var(--primary-light)' : 'white',
+                          borderColor: transcriptionSource === 'system' ? 'var(--primary)' : 'var(--gray-light)',
+                          color: transcriptionSource === 'system' ? 'var(--primary-dark)' : 'var(--gray)',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease',
+                          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px'
+                        }}
+                      >
+                        <i className="fas fa-volume-up" style={{ fontSize: '24px' }}></i>
+                        <span style={{ fontWeight: '600' }}>System</span>
+                      </button>
                     </div>
+                  </div>
 
-                    <div className="queue-section">
-                      <div className="section-label">In Progress</div>
-                      {transcribeQueue.length === 0 ? (
-                        <div className="queue-empty">No files are currently transcribing.</div>
+                  {/* 2. Controls & Timer */}
+                  <div className="live-controls" style={{ textAlign: 'center', marginBottom: '30px' }}>
+                    {status === 'recording' && (
+                      <div className="live-timer" style={{ fontSize: '2.5rem', fontWeight: '700', fontFamily: 'monospace', color: 'var(--dark)', marginBottom: '20px', letterSpacing: '-1px' }}>
+                        {recordingTime}
+                      </div>
+                    )}
+
+                    <div className="action-buttons-enhanced" style={{ display: 'flex', justifyContent: 'center' }}>
+                      {status === 'recording' ? (
+                        <button className="btn btn-danger btn-xl" onClick={stopRecording} style={{ padding: '16px 40px', fontSize: '18px', borderRadius: '30px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <i className="fas fa-stop"></i> Stop & Transcribe
+                        </button>
+                      ) : status === 'transcribing' ? (
+                        <button className="btn btn-outline btn-xl" disabled style={{ padding: '16px 40px', fontSize: '18px', borderRadius: '30px', display: 'flex', alignItems: 'center', gap: '12px', cursor: 'wait' }}>
+                          <i className="fas fa-spinner fa-spin"></i> Processing...
+                        </button>
                       ) : (
-                        <div className="queue-list">
-                          {transcribeQueue.map(job => (
-                            <div key={job.id} className="queue-item">
-                              <div className="queue-info">
-                                <div className="queue-name">{job.name}</div>
-                                <div className="queue-meta">
-                                  {formatFileSize(job.size)} • {job.status === 'processing' ? 'Transcribing' : 'Queued'}
-                                </div>
-                              </div>
-                              <div className="queue-progress">
-                                <div className={`queue-status ${job.status}`}>
-                                  {job.status === 'processing' ? displayPercent(job.progress) : 'Waiting'}
-                                </div>
-                                <div className="queue-progress-bar">
-                                  <div
-                                    className="queue-progress-fill"
-                                    style={{
-                                      width: `${job.status === 'processing'
-                                        ? Math.max(0, Math.min(100, Math.round(job.progress || 0)))
-                                        : 0}%`
-                                    }}
-                                  ></div>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
+                        <button className="btn btn-primary btn-xl" onClick={() => {
+                          if (transcriptionSource === 'mic') startMicrophoneRecording();
+                          else startSystemAudioRecording();
+                        }} style={{ padding: '16px 40px', fontSize: '18px', borderRadius: '30px', display: 'flex', alignItems: 'center', gap: '12px', boxShadow: '0 4px 14px rgba(37, 99, 235, 0.4)' }}>
+                          <i className="fas fa-record-vinyl"></i>
+                          {transcriptionSource === 'mic' ? 'Start Recording' : 'Start Capture'}
+                        </button>
                       )}
                     </div>
 
-                    {completedTranscriptions.length > 0 && (
-                      <div className="completed-section">
-                        <div className="section-label">Completed</div>
-                        <div className="completed-list">
-                          {completedTranscriptions.map(job => (
-                            <div key={job.id} className="completed-item">
-                              <div className="completed-header">
-                                <div>
-                                  <div className="queue-name">{job.name}</div>
-                                  <div className="queue-meta">{job.status === 'error' ? 'Failed' : 'Finished • 100%'}</div>
-                                </div>
-                                {job.status !== 'error' && (
-                                  <button className="btn btn-outline btn-sm" onClick={() => navigator.clipboard.writeText(job.transcript || '')}>
-                                    Copy
-                                  </button>
-                                )}
-                              </div>
-                              <div className="completed-body" style={{ whiteSpace: 'pre-wrap' }}>
-                                {job.status === 'error' ? `Error: ${job.transcript}` : job.transcript}
-                              </div>
+                    {status === 'idle' && (
+                      <div className="status-hint" style={{ marginTop: '16px', color: 'var(--gray)', fontSize: '14px' }}>
+                        <i className="fas fa-info-circle"></i> Ready to capture high-quality audio
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 3. Output Container */}
+                  <div className="output-container" style={{ marginBottom: '16px', minHeight: '300px' }}>
+                    <div className="output-header" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '12px' }}>
+                      <div className="output-header-top" style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+                        <div className="output-header-left">
+                          <div className="output-title"><i className="fas fa-file-alt"></i> Live Output</div>
+                        </div>
+                        <div className="output-actions">
+                          <button className="btn btn-outline" onClick={() => handleDownloadTxt(transcription)}><i className="fas fa-download"></i></button>
+                        </div>
+                      </div>
+
+                      {/* Subtabs moved here */}
+                      <div className="output-subtabs" style={{ display: 'flex', gap: '4px', background: 'var(--gray-light)', padding: '4px', borderRadius: '8px', width: 'fit-content' }}>
+                        <button
+                          className={`sub-tab-btn ${liveSubTab === 'transcript' ? 'active' : ''}`}
+                          onClick={() => setLiveSubTab('transcript')}
+                          style={{ padding: '6px 16px', fontSize: '13px', borderRadius: '6px', border: 'none' }}
+                        >
+                          Transcript
+                        </button>
+                        <button
+                          className={`sub-tab-btn ${liveSubTab === 'notes' ? 'active' : ''}`}
+                          onClick={() => setLiveSubTab('notes')}
+                          style={{ padding: '6px 16px', fontSize: '13px', borderRadius: '6px', border: 'none' }}
+                        >
+                          Notes
+                        </button>
+                        <button
+                          className={`sub-tab-btn ${liveSubTab === 'assist' ? 'active' : ''}`}
+                          onClick={() => setLiveSubTab('assist')}
+                          style={{ padding: '6px 16px', fontSize: '13px', borderRadius: '6px', border: 'none' }}
+                        >
+                          Assist
+                        </button>
+                      </div>
+                    </div>
+
+                    {liveSubTab === 'transcript' && (
+                      <div className="output" id="transcript">
+                        {transcription || <span style={{ color: 'var(--gray)', fontStyle: 'italic' }}>Waiting for speech...</span>}
+                      </div>
+                    )}
+                    {liveSubTab === 'notes' && (
+                      <div
+                        id="liveNotes"
+                        className="flex-1 overflow-y-auto p-4 text-sm text-[var(--text-secondary)]"
+                      >
+                        {liveNotes ? (
+                          <div dangerouslySetInnerHTML={{ __html: marked.parse(liveNotes) }} />
+                        ) : (
+                          <div style={{ textAlign: 'center', padding: '40px', color: 'var(--gray)' }}>
+                            <i className="fas fa-sticky-note" style={{ fontSize: '32px', marginBottom: '12px', opacity: 0.5 }}></i>
+                            <p>Live notes will appear here automatically.</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {liveSubTab === 'assist' && (
+                      <div className="chat-container live-chat-container">
+                        <div className="chat-messages" ref={(el) => { if (el) el.scrollTop = el.scrollHeight; }}>
+                          {assistMessages.map((msg, idx) => (
+                            <div key={idx} className={`message ${msg.role}`}>
+                              {msg.content}
                             </div>
                           ))}
+                          {assistLoading && <div className="message assistant"><i className="fas fa-spinner fa-spin"></i></div>}
+                        </div>
+                        <div className="chat-input-container">
+                          <textarea
+                            className="chat-input"
+                            placeholder="Ask about the live context..."
+                            rows="1"
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' && !e.shiftKey) {
+                                e.preventDefault();
+                                sendAssistMessage(e.target.value);
+                                e.target.value = '';
+                              }
+                            }}
+                          ></textarea>
+                          <button className="send-button" onClick={(e) => {
+                            const input = e.target.previousSibling;
+                            sendAssistMessage(input.value);
+                            input.value = '';
+                          }}><i className="fas fa-paper-plane"></i></button>
                         </div>
                       </div>
                     )}
                   </div>
-                )}
-              </div>
-            )}
 
+                </div>
+              )}
+
+              {/* BACKGROUND CATEGORY */}
+              {transcribeCategory === 'background' && (
+                <div className="category-content active">
+                  <div className="background-controls-card">
+                    <div className="info-header">
+                      <i className="fas fa-desktop info-icon-bg"></i>
+                      <div className="info-text-group">
+                        <h4>Background Capture</h4>
+                        <p>Record systems audio or microphone while this tab is in the background.</p>
+                      </div>
+                    </div>
+
+                    <div className="bg-settings-row">
+                      <label className="toggle-label-clean">
+                        <span>Mute tab while recording</span>
+                        <div className="toggle-switch-wrapper">
+                          <input type="checkbox" checked={backgroundMuted} onChange={(e) => setBackgroundMuted(e.target.checked)} />
+                          <span className="toggle-slider"></span>
+                        </div>
+                      </label>
+                    </div>
+
+                    <div className="bg-actions-row">
+                      {status === 'recording' ? (
+                        <button className="btn btn-danger btn-large-block" onClick={stopRecording}>
+                          <div className="btn-content-stack">
+                            <i className="fas fa-stop-circle"></i>
+                            <span>Stop & Transcribe</span>
+                          </div>
+                        </button>
+                      ) : status === 'transcribing' ? (
+                        <button className="btn btn-outline btn-large-block disabled" disabled>
+                          <div className="btn-content-stack">
+                            <i className="fas fa-spinner fa-spin"></i>
+                            <span>Processing...</span>
+                          </div>
+                        </button>
+                      ) : (
+                        <div className="dual-action-grid">
+                          <button className="btn-action-card primary" onClick={() => {
+                            if (transcriptionSource === 'mic') startMicrophoneRecording();
+                            else startSystemAudioRecording();
+                          }}>
+                            <i className="fas fa-record-vinyl"></i>
+                            <span>Start Capture</span>
+                          </button>
+
+                          <button className="btn-action-card rapid" onClick={handleRapidTranscribeClick}>
+                            <i className="fas fa-bolt"></i>
+                            <span>Rapid Transcribe</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="output-container" style={{ marginBottom: '16px', minHeight: '300px' }}>
+                    <div className="output-header" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '12px' }}>
+                      <div className="output-header-top" style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+                        <div className="output-header-left">
+                          <div className="output-title"><i className="fas fa-file-alt"></i> Background Output</div>
+                        </div>
+                        <div className="output-actions">
+                          <button className="btn btn-outline" onClick={() => handleDownloadTxt(transcription)}><i className="fas fa-download"></i></button>
+                        </div>
+                      </div>
+
+                      {/* Subtabs */}
+                      <div className="output-subtabs" style={{ display: 'flex', gap: '4px', background: 'var(--gray-light)', padding: '4px', borderRadius: '8px', width: 'fit-content' }}>
+                        <button
+                          className={`sub-tab-btn ${outputSubTab === 'transcript' ? 'active' : ''}`}
+                          onClick={() => setOutputSubTab('transcript')}
+                          style={{ padding: '6px 16px', fontSize: '13px', borderRadius: '6px', border: 'none' }}
+                        >
+                          Transcript
+                        </button>
+                        <button
+                          className={`sub-tab-btn ${outputSubTab === 'notes' ? 'active' : ''}`}
+                          onClick={() => setOutputSubTab('notes')}
+                          style={{ padding: '6px 16px', fontSize: '13px', borderRadius: '6px', border: 'none' }}
+                        >
+                          Notes
+                        </button>
+                        <button
+                          className={`sub-tab-btn ${outputSubTab === 'assist' ? 'active' : ''}`}
+                          onClick={() => setOutputSubTab('assist')}
+                          style={{ padding: '6px 16px', fontSize: '13px', borderRadius: '6px', border: 'none' }}
+                        >
+                          Assist
+                        </button>
+                      </div>
+                    </div>
+
+                    {outputSubTab === 'transcript' && (
+                      <div className="output" id="transcript">
+                        {transcription || "Your background transcription will appear here..."}
+                      </div>
+                    )}
+                    {outputSubTab === 'notes' && (
+                      <div
+                        id="liveNotes"
+                        className="flex-1 overflow-y-auto p-4 text-sm text-[var(--text-secondary)]"
+                      >
+                        {liveNotes ? (
+                          <div dangerouslySetInnerHTML={{ __html: marked.parse(liveNotes) }} />
+                        ) : (
+                          <div style={{ textAlign: 'center', padding: '40px', color: 'var(--gray)' }}>
+                            <i className="fas fa-sticky-note" style={{ fontSize: '32px', marginBottom: '12px', opacity: 0.5 }}></i>
+                            <p>Notes will appear here automatically.</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {outputSubTab === 'assist' && (
+                      <div className="chat-container live-chat-container">
+                        <div className="chat-messages" ref={(el) => { if (el) el.scrollTop = el.scrollHeight; }}>
+                          {assistMessages.map((msg, idx) => (
+                            <div key={idx} className={`message ${msg.role}`}>
+                              {msg.content}
+                            </div>
+                          ))}
+                          {assistLoading && <div className="message assistant"><i className="fas fa-spinner fa-spin"></i></div>}
+                        </div>
+                        <div className="chat-input-container">
+                          <textarea
+                            className="chat-input"
+                            placeholder="Ask about the background context..."
+                            rows="1"
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' && !e.shiftKey) {
+                                e.preventDefault();
+                                sendAssistMessage(e.target.value);
+                                e.target.value = '';
+                              }
+                            }}
+                          ></textarea>
+                          <button className="send-button" onClick={(e) => {
+                            const input = e.target.previousSibling;
+                            sendAssistMessage(input.value);
+                            input.value = '';
+                          }}><i className="fas fa-paper-plane"></i></button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* FILE CATEGORY (Formerly Upload) */}
+              {transcribeCategory === 'file' && (
+                <div className="category-content active">
+                  {/* Workflow visual (static) */}
+
+
+                  {/* Drop Zone */}
+                  <div className="drop-zone-enhanced"
+                    onClick={() => document.getElementById('fileInput').click()}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      handleFileSelect({ target: { files: e.dataTransfer.files } });
+                    }}
+                  >
+                    <i className="fas fa-cloud-upload-alt drop-icon"></i>
+                    <p className="drop-text">Click or Drop Files Here</p>
+                    <p className="drop-subtext">Supports MP3, WAV, M4A, etc.</p>
+                    <input type="file" id="fileInput" className="file-input" accept="audio/*,video/*" multiple onChange={handleFileSelect} />
+                  </div>
+
+                  {/* File List */}
+                  <div className="file-list-enhanced">
+                    {transcribeFiles.map((f, i) => (
+                      <div key={i} className="file-item-enhanced">
+                        <div className="file-icon-enhanced"><i className="fas fa-file-audio"></i></div>
+                        <div className="file-info-enhanced">
+                          <div className="file-name-enhanced">{f.name}</div>
+                          <div className="file-size-enhanced">{(f.size / 1024 / 1024).toFixed(2)} MB</div>
+                        </div>
+                        <button className="remove-file" onClick={() => removeFile(i)}><i className="fas fa-times"></i></button>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Model Selector */}
+                  <div className="model-selector-enhanced">
+                    <h3 className="section-title"><i className="fas fa-brain"></i> AI Model</h3>
+                    <div className="model-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
+
+
+
+                      <div className={`model-card ${selectedModel === 'base' ? 'selected' : ''}`} onClick={() => switchModel('base')}>
+                        <div className="model-header">
+                          <div className="model-icon-wrapper">
+                            <i className="fas fa-balance-scale model-icon"></i>
+                          </div>
+                          <div className="model-title-group">
+                            <h4 className="model-name">Base</h4>
+                            <span className="model-badge">Balanced</span>
+                          </div>
+                          {selectedModel === 'base' && <i className="fas fa-check-circle" style={{ color: 'var(--primary)' }}></i>}
+                        </div>
+                        <div className="model-info">
+                          <p className="model-desc">Good balance. Recommended for most general use cases.</p>
+                          <div className="model-tags">
+                            <span className="tag speed">Med Speed</span>
+                            <span className="tag accuracy">Good Accuracy</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className={`model-card ${selectedModel === 'small' ? 'selected' : ''}`} onClick={() => switchModel('small')}>
+                        <div className="model-header">
+                          <div className="model-icon-wrapper">
+                            <i className="fas fa-crown model-icon"></i>
+                          </div>
+                          <div className="model-title-group">
+                            <h4 className="model-name">Small</h4>
+                            <span className="model-badge">Premium</span>
+                          </div>
+                          {selectedModel === 'small' && <i className="fas fa-check-circle" style={{ color: 'var(--primary)' }}></i>}
+                        </div>
+                        <div className="model-info">
+                          <p className="model-desc">High accuracy. Best for professional work and difficult audio.</p>
+                          <div className="model-tags">
+                            <span className="tag speed">Low Speed</span>
+                            <span className="tag accuracy">High Accuracy</span>
+                          </div>
+                        </div>
+                      </div>
+
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="action-buttons-enhanced">
+                    <button className="btn btn-primary btn-large" onClick={startTranscription} disabled={status === 'transcribing' || status === 'loading-model'}>
+                      {status === 'transcribing' ? <i className="fas fa-spinner fa-spin"></i> : <i className="fas fa-play-circle"></i>}
+                      {status === 'transcribing' ? ' Transcribing...' : ' Start Transcription'}
+                    </button>
+                  </div>
+
+                  {/* Transcription Results & Queue */}
+                  {(transcribeQueue.length > 0 || completedTranscriptions.length > 0) && (
+                    <div className="output-container-enhanced transcription-results-card" style={{ marginTop: '30px' }}>
+                      <div className="output-header">
+                        <div className="output-title"><i className="fas fa-file-alt"></i> Transcription Results</div>
+                        <div className="output-actions">
+                          <button className="btn btn-outline" onClick={() => navigator.clipboard.writeText(transcription)}><i className="fas fa-copy"></i> Copy</button>
+                          <button className="btn btn-outline" onClick={() => handleDownloadTxt(transcription)}><i className="fas fa-download"></i> Download TXT</button>
+                          <button className="btn btn-primary" onClick={() => handleCreateAINotes(transcription)}><i className="fas fa-robot"></i> AI Notes</button>
+                        </div>
+                      </div>
+
+                      <div className="queue-section">
+                        <div className="section-label">In Progress</div>
+                        {transcribeQueue.length === 0 ? (
+                          <div className="queue-empty">No files are currently transcribing.</div>
+                        ) : (
+                          <div className="queue-list">
+                            {transcribeQueue.map(job => (
+                              <div key={job.id} className="queue-item">
+                                <div className="queue-info">
+                                  <div className="queue-name">{job.name}</div>
+                                  <div className="queue-meta">
+                                    {formatFileSize(job.size)} • {job.status === 'processing' ? 'Transcribing' : 'Queued'}
+                                  </div>
+                                </div>
+                                <div className="queue-progress">
+                                  <div className={`queue-status ${job.status}`}>
+                                    {job.status === 'processing' ? displayPercent(job.progress) : 'Waiting'}
+                                  </div>
+                                  <div className="queue-progress-bar">
+                                    <div
+                                      className="queue-progress-fill"
+                                      style={{
+                                        width: `${job.status === 'processing'
+                                          ? Math.max(0, Math.min(100, Math.round(job.progress || 0)))
+                                          : 0}%`
+                                      }}
+                                    ></div>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {completedTranscriptions.length > 0 && (
+                        <div className="completed-section">
+                          <div className="section-label">Completed</div>
+                          <div className="completed-list">
+                            {completedTranscriptions.map(job => (
+                              <div key={job.id} className="completed-item">
+                                <div className="completed-header">
+                                  <div>
+                                    <div className="queue-name">{job.name}</div>
+                                    <div className="queue-meta">{job.status === 'error' ? 'Failed' : 'Finished • 100%'}</div>
+                                  </div>
+                                  {job.status !== 'error' && (
+                                    <button className="btn btn-outline btn-sm" onClick={() => navigator.clipboard.writeText(job.transcript || '')}>
+                                      Copy
+                                    </button>
+                                  )}
+                                </div>
+                                <div className="completed-body" style={{ whiteSpace: 'pre-wrap' }}>
+                                  {job.status === 'error' ? `Error: ${job.transcript}` : job.transcript}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {
-        activeTab === 'history' && (
-          <HistoryTab onLoadTranscription={loadFromHistory} />
-        )
-      }
+        {
+          activeTab === 'history' && (
+            <HistoryTab onLoadTranscription={loadFromHistory} />
+          )
+        }
 
-      {
-        activeTab === 'notes' && (
-          <AINotesTab
-            currentTranscription={transcription}
-            liveNotes={liveNotes}
-            user={user}
-            onLoginRequest={() => setShowLoginModal(true)}
-            isViewMode={viewingSavedNotes}
-          />
-        )
-      }
+        {
+          activeTab === 'notes' && (
+            <AINotesTab
+              currentTranscription={transcription}
+              liveNotes={liveNotes}
+              user={user}
+              onLoginRequest={() => setShowLoginModal(true)}
+              isViewMode={viewingSavedNotes}
+            />
+          )
+        }
 
-      {
-        activeTab === 'chat' && (
-          <ChatTab
-            currentTranscription={transcription}
-            user={user}
-            onLoginRequest={() => setShowLoginModal(true)}
-          />
-        )
-      }
+        {
+          activeTab === 'chat' && (
+            <ChatTab
+              currentTranscription={transcription}
+              user={user}
+              onLoginRequest={() => setShowLoginModal(true)}
+            />
+          )
+        }
+
+      </main>
 
       {/* Login Modal (Styled to match Electron App) */}
       {
