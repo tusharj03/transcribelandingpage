@@ -170,6 +170,9 @@ function App() {
   // Model State
   const [selectedModel, setSelectedModel] = useState('base');
 
+  // Mobile Sidebar State
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
   // Worker & Transcription State
   const [status, setStatus] = useState('idle'); // idle, loading-model, recording, transcribing, complete, error
   const [downloadProgress, setDownloadProgress] = useState(0);
@@ -1087,7 +1090,13 @@ function App() {
         user={user}
         onLogin={() => setShowLoginModal(true)}
         onLogout={logout}
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
       />
+
+      {isSidebarOpen && (
+        <div className="sidebar-overlay" onClick={() => setIsSidebarOpen(false)}></div>
+      )}
 
       <main className="main-content">
         {nativeHostConnected && (
@@ -1097,18 +1106,10 @@ function App() {
         )}
 
         <div className="dashboard-header">
-          <h1>
-            {activeTab === 'transcribe' && 'Transcription Studio'}
-            {activeTab === 'history' && 'History'}
-            {activeTab === 'notes' && 'AI Notes'}
-            {activeTab === 'chat' && 'AI Chat Assistant'}
-          </h1>
-          <p className="subtitle-sm">
-            {activeTab === 'transcribe' ? 'Convert audio, video, and screen recordings to text with AI.' :
-              activeTab === 'history' ? 'View and manage your past transcriptions.' :
-                activeTab === 'notes' ? ' Organize your thoughts with AI-generated notes.' :
-                  'Chat with your transcriptions to get answers.'}
-          </p>
+          <button className="mobile-menu-btn" onClick={() => setIsSidebarOpen(true)} style={{ marginBottom: '16px' }}>
+            <i className="fas fa-bars"></i>
+          </button>
+
         </div>
 
         {/* Transcribe Content */}

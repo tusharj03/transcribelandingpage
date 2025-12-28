@@ -1,8 +1,11 @@
 import React from 'react';
 
-const Sidebar = ({ activeTab, setActiveTab, onRapidTranscribe, user, onLogin, onLogout }) => {
+const Sidebar = ({ activeTab, setActiveTab, onRapidTranscribe, user, onLogin, onLogout, isOpen, onClose }) => {
     return (
-        <aside className="sidebar">
+        <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
+            <button className="sidebar-close-btn" onClick={onClose}>
+                <i className="fas fa-times"></i>
+            </button>
             <div className="sidebar-header">
                 <div className="logo-container">
                     <img src="/icons/resonote1795x512.png" alt="Resonote" className="logo-img" />
@@ -31,7 +34,7 @@ const Sidebar = ({ activeTab, setActiveTab, onRapidTranscribe, user, onLogin, on
 
                     <button
                         className={`nav-item ${activeTab === 'transcribe' ? 'active' : ''}`}
-                        onClick={() => setActiveTab('transcribe')}
+                        onClick={() => { setActiveTab('transcribe'); if (window.innerWidth < 768) onClose(); }}
                     >
                         <i className="fa-solid fa-microphone-lines nav-icon"></i>
                         <span>Transcribe</span>
@@ -39,7 +42,7 @@ const Sidebar = ({ activeTab, setActiveTab, onRapidTranscribe, user, onLogin, on
 
                     <button
                         className={`nav-item ${activeTab === 'history' ? 'active' : ''}`}
-                        onClick={() => setActiveTab('history')}
+                        onClick={() => { setActiveTab('history'); if (window.innerWidth < 768) onClose(); }}
                     >
                         <i className="fa-solid fa-clock-rotate-left nav-icon"></i>
                         <span>History</span>
@@ -47,7 +50,7 @@ const Sidebar = ({ activeTab, setActiveTab, onRapidTranscribe, user, onLogin, on
 
                     <button
                         className={`nav-item ${activeTab === 'notes' ? 'active' : ''}`}
-                        onClick={() => setActiveTab('notes')}
+                        onClick={() => { setActiveTab('notes'); if (window.innerWidth < 768) onClose(); }}
                     >
                         <i className="fa-solid fa-wand-magic-sparkles nav-icon"></i>
                         <span>AI Notes</span>
@@ -55,7 +58,7 @@ const Sidebar = ({ activeTab, setActiveTab, onRapidTranscribe, user, onLogin, on
 
                     <button
                         className={`nav-item ${activeTab === 'chat' ? 'active' : ''}`}
-                        onClick={() => setActiveTab('chat')}
+                        onClick={() => { setActiveTab('chat'); if (window.innerWidth < 768) onClose(); }}
                     >
                         <i className="fa-solid fa-comments nav-icon"></i>
                         <span>Chat</span>
