@@ -159,6 +159,36 @@ app.get('/api/config', (req, res) => {
   });
 });
 
+// LLM Proxy Endpoint
+app.post('/api/llm', async (req, res) => {
+  try {
+    const upstreamResponse = await fetch('https://toolkit.rork.com/text/llm/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Origin': 'http://localhost:3000',
+        'Referer': 'http://localhost:3000/',
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      },
+      body: JSON.stringify(req.body)
+    });
+
+    if (!upstreamResponse.ok) {
+      throw new Error(`Upstream API failed: ${upstreamResponse.status}`);
+    }
+
+    const data = await upstreamResponse.json();
+    res.json(data);
+
+  } catch (error) {
+    console.error('LLM Proxy Error:', error);
+    res.status(500).json({
+      error: 'Failed to generate response',
+      details: error.message
+    });
+  }
+});
+
 // User Registration with Email Verification
 app.post('/api/register', async (req, res) => {
   try {
