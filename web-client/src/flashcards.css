@@ -1,0 +1,484 @@
+/* ========== FLASHCARDS TAB ========== */
+
+.flashcards-container {
+    padding: 20px;
+    max-width: 900px;
+    margin: 0 auto;
+    font-family: 'Inter', sans-serif;
+}
+
+/* --- Header / Controls --- */
+.flashcards-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    background: white;
+    padding: 20px;
+    border-radius: 16px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    /* Matching var(--shadow) roughly */
+    border: 1px solid #e2e8f0;
+}
+
+.flashcards-controls {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+}
+
+.flashcards-title h2 {
+    font-size: 24px;
+    font-weight: 700;
+    color: #1e293b;
+    /* Slate 800 */
+    margin-bottom: 4px;
+}
+
+.flashcards-title p {
+    color: #64748b;
+    /* Slate 500 */
+    font-size: 14px;
+}
+
+/* --- Controls Buttons --- */
+.btn-generate-cards {
+    /* Inherits from .btn .btn-primary .btn-large */
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0 auto;
+}
+
+.btn-generate-cards:hover {
+    transform: translateY(-2px);
+}
+
+.btn-generate-cards:active {
+    transform: translateY(0);
+}
+
+.btn-generate-cards:disabled {
+    opacity: 0.7;
+    cursor: wait;
+}
+
+/* --- Empty State --- */
+.flashcards-empty {
+    text-align: center;
+    padding: 60px;
+    color: #94a3b8;
+}
+
+.flashcards-empty i {
+    font-size: 48px;
+    margin-bottom: 16px;
+    color: #cbd5e1;
+}
+
+/* --- Controls Row (Source & Mode) --- */
+.flashcards-controls-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    gap: 16px;
+    background: #f8fafc;
+    padding: 16px;
+    border-radius: 12px;
+    border: 1px solid #f1f5f9;
+}
+
+.control-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.control-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Sleek Dropdown */
+.source-select {
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid #cbd5e1;
+    background: white;
+    color: #334155;
+    font-size: 14px;
+    min-width: 200px;
+    cursor: pointer;
+}
+
+/* Segmented Toggle */
+.mode-toggle {
+    display: flex;
+    background: #e2e8f0;
+    padding: 4px;
+    border-radius: 8px;
+    gap: 4px;
+}
+
+.mode-btn {
+    padding: 6px 16px;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: #64748b;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.mode-btn.active {
+    background: white;
+    color: #2D7FD3;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* --- Card Grid (Review Mode) --- */
+.card-stage {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 400px;
+    perspective: 1000px;
+    /* Essential for 3D effect */
+}
+
+/* --- The Card Itself --- */
+.flashcard {
+    width: 600px;
+    height: 350px;
+    position: relative;
+    cursor: pointer;
+    transform-style: preserve-3d;
+    transition: transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1);
+}
+
+.flashcard.flipped {
+    transform: rotateY(180deg);
+}
+
+/* --- Faces (Front & Back) --- */
+.card-face {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    -webkit-backface-visibility: hidden;
+    /* Safari */
+    backface-visibility: hidden;
+    border-radius: 24px;
+    background: white;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    border: 1px solid #f1f5f9;
+    padding: 40px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+}
+
+.card-face.front {
+    background: white;
+}
+
+.card-face.back {
+    transform: rotateY(180deg);
+    background: #f8fafc;
+    /* Slightly darker white for back */
+    border-color: #2D7FD3;
+    /* Blue border to indicate "Answer" side */
+}
+
+/* --- Content Typography --- */
+.card-label {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 600;
+    color: #94a3b8;
+    margin-bottom: 20px;
+}
+
+.card-content {
+    font-size: 24px;
+    font-weight: 500;
+    color: #1e293b;
+    line-height: 1.5;
+}
+
+.card-flip-hint {
+    position: absolute;
+    bottom: 20px;
+    font-size: 12px;
+    color: #cbd5e1;
+}
+
+/* --- Spaced Repetition Controls --- */
+.review-controls {
+    margin-top: 40px;
+    display: flex;
+    gap: 12px;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: all 0.3s;
+    pointer-events: none;
+}
+
+.review-controls.visible {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+
+.btn-rating {
+    padding: 12px 24px;
+    border-radius: 12px;
+    border: none;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    min-width: 100px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.rating-label {
+    font-size: 14px;
+}
+
+.rating-sub {
+    font-size: 11px;
+    opacity: 0.8;
+    font-weight: 400;
+}
+
+/* Rating Colors */
+.btn-rating.again {
+    background: #fee2e2;
+    color: #ef4444;
+}
+
+.btn-rating.again:hover {
+    background: #fecaca;
+}
+
+.btn-rating.hard {
+    background: #ffedd5;
+    color: #f97316;
+}
+
+.btn-rating.hard:hover {
+    background: #fed7aa;
+}
+
+.btn-rating.good {
+    background: #dcfce7;
+    color: #22c55e;
+}
+
+.btn-rating.good:hover {
+    background: #bbf7d0;
+}
+
+.btn-rating.easy {
+    background: #dbeafe;
+    color: #3b82f6;
+}
+
+.btn-rating.easy:hover {
+    background: #bfdbfe;
+}
+
+
+/* --- Progress Bar --- */
+.progress-container {
+    margin-top: 30px;
+    width: 600px;
+    text-align: center;
+}
+
+.progress-text {
+    font-size: 14px;
+    color: #64748b;
+    margin-bottom: 8px;
+}
+
+.progress-bar-bg {
+    width: 100%;
+    height: 6px;
+    background: #f1f5f9;
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.progress-bar-fill {
+    height: 100%;
+    background: #2D7FD3;
+    transition: width 0.3s ease;
+}
+
+/* --- Quiz UI --- */
+.quiz-container {
+    width: 600px;
+    max-width: 100%;
+}
+
+.quiz-question-card {
+    background: white;
+    padding: 30px;
+    border-radius: 20px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    border: 1px solid #f1f5f9;
+    margin-bottom: 24px;
+    text-align: center;
+}
+
+.quiz-question {
+    font-size: 20px;
+    font-weight: 600;
+    color: #1e293b;
+    line-height: 1.4;
+}
+
+.quiz-options {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.quiz-option {
+    padding: 16px 20px;
+    background: white;
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    cursor: pointer;
+    font-size: 15px;
+    color: #334155;
+    text-align: left;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.quiz-option:hover {
+    border-color: #cbd5e1;
+    background: #f8fafc;
+}
+
+.quiz-option.selected {
+    border-color: #2D7FD3;
+    background: #eff6ff;
+    color: #1e40af;
+}
+
+.quiz-option.correct {
+    border-color: #22c55e;
+    background: #f0fdf4;
+    color: #15803d;
+}
+
+.quiz-option.incorrect {
+    border-color: #ef4444;
+    background: #fef2f2;
+    color: #b91c1c;
+}
+
+.option-circle {
+    width: 20px;
+    height: 20px;
+    border: 2px solid currentColor;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.quiz-option.selected .option-circle,
+.quiz-option.correct .option-circle,
+.quiz-option.incorrect .option-circle {
+    background: currentColor;
+    box-shadow: inset 0 0 0 3px white;
+}
+
+
+/* --- Segmented Progress Bar --- */
+.segmented-progress {
+    display: flex;
+    gap: 6px;
+    width: 200px;
+    /* Or whatever width fits in header */
+}
+
+.progress-segment {
+    flex: 1;
+    height: 6px;
+    background: #e2e8f0;
+    border-radius: 3px;
+    transition: background 0.3s;
+}
+
+.progress-segment.completed {
+    background: #2D7FD3;
+}
+
+.progress-segment.current {
+    background: #2D7FD3;
+    opacity: 0.5;
+}
+
+/* --- Loader --- */
+.flashcards-loading {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 400px;
+    color: #64748b;
+    gap: 16px;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid #e2e8f0;
+    border-top-color: #2D7FD3;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+/* Force small button styles */
+.btn-force-small {
+    font-size: 14px !important;
+    padding: 10px 24px !important;
+    width: auto !important;
+    margin: 0 auto !important;
+    border-radius: 50px !important;
+    background: #2D7FD3 !important;
+    color: white !important;
+    border: none !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    box-shadow: none !important;
+}
+
+.btn-force-small:hover {
+    background: #1C5FA7 !important;
+    transform: translateY(-2px);
+}

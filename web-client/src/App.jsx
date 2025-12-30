@@ -4,6 +4,7 @@ import './index.css';
 import HistoryTab, { saveToHistory } from './components/HistoryTab';
 import AINotesTab from './components/AINotesTab';
 import ChatTab from './components/ChatTab';
+import FlashcardsTab from './components/FlashcardsTab';
 import Sidebar from './components/Sidebar';
 import { useAuth } from './hooks/useAuth';
 import { useLiveNotes } from './hooks/useLiveNotes';
@@ -1753,6 +1754,7 @@ function App() {
                                 <div className="completed-header">
                                   <div>
                                     <div className="queue-name">{job.name}</div>
+                                    ```
                                     <div className="queue-meta">{job.status === 'error' ? 'Failed' : 'Finished • 100%'}</div>
                                   </div>
                                   {job.status !== 'error' && (
@@ -1778,14 +1780,15 @@ function App() {
           </div>
         )}
 
-        {
-          activeTab === 'history' && (
+        {/* New Tab Content Structure */}
+        <div className={`tab-content ${activeTab === 'history' ? 'active' : ''}`}>
+          {activeTab === 'history' && (
             <HistoryTab onLoadTranscription={loadFromHistory} />
-          )
-        }
+          )}
+        </div>
 
-        {
-          activeTab === 'notes' && (
+        <div className={`tab-content ${activeTab === 'notes' ? 'active' : ''}`}>
+          {activeTab === 'notes' && (
             <AINotesTab
               currentTranscription={transcription}
               liveNotes={liveNotes}
@@ -1793,18 +1796,26 @@ function App() {
               onLoginRequest={() => setShowLoginModal(true)}
               isViewMode={viewingSavedNotes}
             />
-          )
-        }
+          )}
+        </div>
 
-        {
-          activeTab === 'chat' && (
+        <div className={`tab-content ${activeTab === 'flashcards' ? 'active' : ''}`}>
+          {activeTab === 'flashcards' && (
+            <FlashcardsTab
+              currentTranscription={transcription}
+            />
+          )}
+        </div>
+
+        <div className={`tab-content ${activeTab === 'chat' ? 'active' : ''}`}>
+          {activeTab === 'chat' && (
             <ChatTab
               currentTranscription={transcription}
               user={user}
               onLoginRequest={() => setShowLoginModal(true)}
             />
-          )
-        }
+          )}
+        </div>
 
       </main>
 

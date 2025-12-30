@@ -63,6 +63,14 @@ const Sidebar = ({
                     </button>
 
                     <button
+                        className={`nav-item ${activeTab === 'flashcards' ? 'active' : ''}`}
+                        onClick={() => { setActiveTab('flashcards'); if (window.innerWidth < 768) onClose(); }}
+                    >
+                        <i className="fa-solid fa-layer-group nav-icon"></i>
+                        <span>Flashcards/Quizzes</span>
+                    </button>
+
+                    <button
                         className={`nav-item ${activeTab === 'chat' ? 'active' : ''}`}
                         onClick={() => { setActiveTab('chat'); if (window.innerWidth < 768) onClose(); }}
                     >

@@ -1,57 +1,110 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { saveToHistory } from './HistoryTab';
 import { marked } from 'marked';
-
-// System prompts from original file
-const SYSTEM_PROMPTS = {
-    summary: `You are an expert content summarizer. Create a comprehensive yet concise summary of the provided transcription. Focus on the main ideas, key findings, and overall message. Structure it with clear headings and bullet points.`,
-    "meeting-notes": `You are a professional meeting coordinator. Transform this transcription into well-organized meeting notes. Include: participants (if mentioned), key discussion points, decisions made, action items with owners and deadlines, and next steps. Use a clear, professional structure with appropriate sections.`,
-    "study-notes": `You are an academic expert. Convert this transcription into effective study notes. Organize by key concepts, include definitions, important facts, and relationships between ideas. Use headings, bullet points, and emphasize critical information for better retention. Structure it for optimal learning.`,
-    "action-plan": `You are a project management specialist. Extract all action items, tasks, and next steps from this transcription. Format as a clear action plan with: specific tasks, responsible parties (if mentioned), deadlines/timelines, and priorities. Use a structured table or organized list format.`,
-    "key-points": `You are a content analyst. Extract the most important key points and main ideas from this transcription. Present them in a clear, concise manner using bullet points. Focus on the essential information that captures the core message and critical insights.`,
-    "detailed": `You are a sophisticated content analyst. Provide a comprehensive analysis of the transcription. Include: main themes, detailed breakdown of key points, important quotes or statements, context analysis, and implications. Structure it with clear sections and subheadings for thorough understanding.`,
-    actions: `You are a productivity expert. Extract all action items, tasks, and next steps from the transcription. Be specific about what needs to be done, by whom (if mentioned), and any deadlines. Format as a clear, actionable list.`
-};
-
-function enhanceStructuredNotes(text) {
-    if (!text) return '';
-    return text
-        .replace(/<h1>/g, '<h1 style="color: var(--dark); border-bottom: 2px solid var(--primary); padding-bottom: 10px; margin-bottom: 20px;">')
-        .replace(/<h2>/g, '<h2 style="color: var(--primary); border-bottom: 1px solid var(--gray-light); padding-bottom: 8px; margin: 25px 0 15px 0;">')
-        .replace(/<h3>/g, '<h3 style="color: var(--dark); margin: 20px 0 12px 0;">')
-        .replace(/<h4>/g, '<h4 style="color: var(--secondary-dark); margin: 16px 0 10px 0;">') // Added h4 styling
-        .replace(/<p>/g, '<p style="margin-bottom: 8px; line-height: 1.6;">')
-        .replace(/<ul>/g, '<ul style="margin: 8px 0; padding-left: 24px;">')
-        .replace(/<ol>/g, '<ol style="margin: 8px 0; padding-left: 24px;">')
-        .replace(/<li>/g, '<li style="margin-bottom: 4px; line-height: 1.5;">')
-        .replace(/<strong>/g, '<strong style="color: var(--primary-dark);">')
-        .replace(/<em>/g, '<em style="color: var(--gray);">')
-        .replace(/<table>/g, '<table style="width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px;">')
-        .replace(/<th>/g, '<th style="background: var(--primary-light); color: var(--primary-dark); padding: 12px; text-align: left; border: 1px solid #e2e8f0;">')
-        .replace(/<td>/g, '<td style="padding: 12px; border: 1px solid #e2e8f0;">');
-}
-
-function formatEnhancedNotes(notes) {
-    if (!notes) return '';
-    try {
-        const rawHtml = marked.parse(notes);
-        return enhanceStructuredNotes(rawHtml);
-    } catch (e) {
-        console.error("Markdown parsing error", e);
-        return notes;
-    }
-}
+import mermaid from 'mermaid';
 
 export default function AINotesTab({ currentTranscription: initialTranscription, liveNotes, user, onLoginRequest, isViewMode = false }) {
     // State
     const [currentTranscription, setCurrentTranscription] = useState(initialTranscription);
-    const [selectedTemplate, setSelectedTemplate] = useState('summary');
     const [history, setHistory] = useState([]);
     const [selectedHistoryId, setSelectedHistoryId] = useState('current');
-    const [customInstructions, setCustomInstructions] = useState('');
     const [generatedNotes, setGeneratedNotes] = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+
+    // Refs
+    const notesRef = useRef(null);
+
+    // Initialize Mermaid
+    useEffect(() => {
+        mermaid.initialize({
+            startOnLoad: false,
+            theme: 'neutral', // Better for light mode
+            securityLevel: 'loose',
+            fontFamily: 'Inter',
+        });
+    }, []);
+
+    // Re-run mermaid when notes change
+    useEffect(() => {
+        if (generatedNotes && notesRef.current) {
+            // Small delay to ensure DOM is updated
+            setTimeout(() => {
+                try {
+                    mermaid.run({
+                        nodes: notesRef.current.querySelectorAll('.mermaid'),
+                    });
+                } catch (err) {
+                    console.error('Mermaid error:', err);
+                }
+            }, 100);
+        }
+    }, [generatedNotes]);
+
+    // ... (keep useEffect for props/history)
+
+    const formatNotes = (markdown) => {
+        if (!markdown) return '';
+        try {
+            // Intelligent Pre-process: Only wrap "naked" graphs if they are NOT already in code blocks
+            const segments = markdown.split(/```/);
+            for (let i = 0; i < segments.length; i += 2) {
+                // Even indices are "text" (outside of code blocks)
+                segments[i] = segments[i].replace(
+                    // Match start of line (with optional whitespace), then graph/flowchart
+                    // Capture until: double newline, OR next header (#), OR next numbered list (1. ), OR end of string
+                    /(^|\n)\s*((?:graph|flowchart)\s+(?:TD|TB|LR|RL)[\s\S]*?)(?=\n\s*\n|\n\s*(?:#|\d+\.\s)|$)/g,
+                    (match, prefix, content) => {
+                        return `${prefix}\`\`\`mermaid\n${content.trim()}\n\`\`\``;
+                    }
+                );
+            }
+            const processedMarkdown = segments.join('```');
+
+            const renderer = new marked.Renderer();
+
+            // Handle marked v5+ signature: code(token)
+            renderer.code = function (codeOrToken, langStr) {
+                let code = codeOrToken;
+                let language = langStr;
+
+                // If first arg is object, it's a token (marked v5+)
+                if (typeof codeOrToken === 'object' && codeOrToken !== null) {
+                    code = codeOrToken.text || '';
+                    language = codeOrToken.lang || '';
+                }
+
+                // Check for mermaid language or content that looks like mermaid
+                const isMermaid = language === 'mermaid' ||
+                    language === 'graph' ||
+                    language === 'flowchart' ||
+                    (!language && /^(graph|flowchart|sequenceDiagram|classDiagram|stateDiagram|pie)\s/.test(code));
+
+                if (isMermaid) {
+                    // 1. Strip 'mermaid' keyword if present
+                    let cleanCode = (code || '').replace(/^mermaid\s+/, '').trim();
+
+                    // 2. Sanitize common LLM syntax errors in Mermaid
+                    // Replace "A + B" (syntax error) with "A and B"
+                    cleanCode = cleanCode.replace(/([A-Za-z0-9])\s*\+\s*([A-Za-z0-9])/g, '$1 and $2');
+                    // Ensure arrows are correct (sometimes LLM outputs '->' in graph TD which is valid, but '-->' is safer)
+
+                    // 3. Force newline after graph definition (vital for single-line output fixes)
+                    // If "graph TD" is followed by something that is NOT a newline, allow insert of newline
+                    cleanCode = cleanCode.replace(/((?:graph|flowchart)\s+(?:TD|TB|LR|RL))\s+(?![\n\r])/, '$1\n');
+
+                    return '<div class="mermaid">' + cleanCode + '</div>';
+                }
+
+                return '<pre><code class="language-' + (language || 'text') + '">' + (code || '') + '</code></pre>';
+            };
+
+            return marked.parse(processedMarkdown, { renderer: renderer });
+        } catch (e) {
+            console.error(e);
+            return markdown;
+        }
+    };
 
     // Update internal state when prop changes
     useEffect(() => {
@@ -65,10 +118,6 @@ export default function AINotesTab({ currentTranscription: initialTranscription,
                 setCurrentTranscription(initialTranscription);
                 // Only clear if we aren't streaming live notes
                 if (!liveNotes) setGeneratedNotes(null);
-            }
-
-            if (selectedHistoryId === 'current') {
-                // Keep current selected
             }
         }
     }, [initialTranscription, isViewMode, liveNotes]);
@@ -85,6 +134,41 @@ export default function AINotesTab({ currentTranscription: initialTranscription,
         }
     }, []);
 
+    // UPDATED PROMPT: Blue/Teal Branding, Tables for Comparisons, No Checkboxes
+    const SYSTEM_PROMPTS = {
+        turbo: `You are an elite academic and professional analyst. Transform the provided transcription into a beautiful, structured document.
+
+        CRITICAL VISUAL RULES:
+        1. **Comparisons**: If comparing two or more items (e.g. Prokaryotic vs Eukaryotic, Old vs New), YOU MUST USE A MARKDOWN TABLE. Do not use lists for comparisons.
+        2. **Visuals**: Create a Mermaid.js diagram for key processes. Use \`\`\`mermaid\ngraph TD\n...\n\`\`\` blocks.
+           **RULES FOR DIAGRAMS:**
+           - Do NOT use "+" to join nodes (e.g. "A + B --> C" is INVALID).
+           - Only use "-->" for arrows.
+           - Keep labels SIMPLE: "A[Water] --> B[Reaction]". Avoid substrings/complex formulas if possible.
+           - Ensure the first node is on a NEW LINE after "graph TD".
+           - Do NOT include title lines inside the mermaid block.
+        3. **Action Items**: Use simple bullet points (*). DO NOT use checkboxes [ ] as they render poorly.
+
+        Structure:
+        # Title of the Session
+        
+        ## Executive Summary
+        (High-level summary)
+
+        ## Visual Overview
+        (Insert Mermaid Diagram here if applicable - show relationships, flows, or hierarchies)
+
+        ## Key Insights & Notes
+        (Detailed notes. Use bolding for emphasis. Use TABLES for any comparisons.)
+        
+        ## Action Items (if applicable)
+        *   Task 1
+        *   Task 2
+        (Do not use [ ])
+        
+        Style the output with clear Markdown. Use "##" for major sections.`
+    };
+
     const handleGenerate = async () => {
         if (!user || (!user.authenticated && !user.offlineMode)) {
             onLoginRequest();
@@ -92,7 +176,7 @@ export default function AINotesTab({ currentTranscription: initialTranscription,
         }
 
         if (!currentTranscription) {
-            setError('Please transcribe a file first or select from history.');
+            setError('Please select a valid source.');
             return;
         }
 
@@ -101,18 +185,14 @@ export default function AINotesTab({ currentTranscription: initialTranscription,
         setGeneratedNotes(null);
 
         try {
-            const systemPrompt = SYSTEM_PROMPTS[selectedTemplate] || SYSTEM_PROMPTS.summary;
-            const promptContent = customInstructions
-                ? `${systemPrompt}\n\nAdditional Instructions: ${customInstructions}`
-                : systemPrompt;
-
+            // Updated Prompt Logic
             const response = await fetch('/api/llm', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     messages: [
-                        { role: 'system', content: promptContent },
-                        { role: 'user', content: `Please analyze this transcription:\n\n${currentTranscription.substring(0, 15000)}` }
+                        { role: 'system', content: SYSTEM_PROMPTS.turbo },
+                        { role: 'user', content: `Analyze the following transcription and allow Mermaid diagrams to be rendered by wrapping them in triple backticks with 'mermaid' language.\n\nTranscription:\n${currentTranscription.substring(0, 15000)}` }
                     ]
                 })
             });
@@ -123,16 +203,17 @@ export default function AINotesTab({ currentTranscription: initialTranscription,
             if (!data.completion) throw new Error('No completion received');
 
             let analysis = data.completion.trim();
-            // Clean markdown blocks if present
-            const codeBlockMatch = analysis.match(/```(?:markdown)?\s*([\s\S]*?)\s*```/);
-            if (codeBlockMatch) {
-                analysis = codeBlockMatch[1].trim();
+            // Only strip if the ENTIRE response is wrapped in backticks (common LLM behavior)
+            if (analysis.startsWith('```') && analysis.endsWith('```')) {
+                // remove first line (```markdown) and last line (```)
+                const lines = analysis.split('\n');
+                if (lines.length >= 2) {
+                    analysis = lines.slice(1, -1).join('\n').trim();
+                }
             }
 
             setGeneratedNotes(analysis);
-
-            // Auto-save
-            saveToHistory(`AI Notes - ${selectedTemplate}`, analysis, 'notes', selectedTemplate);
+            saveToHistory(`Smart Notes`, analysis, 'notes', 'turbo');
 
         } catch (err) {
             console.error(err);
@@ -142,145 +223,89 @@ export default function AINotesTab({ currentTranscription: initialTranscription,
         }
     };
 
-    const templates = [
-        { id: 'summary', name: 'Summary & Key Points' },
-        { id: 'meeting-notes', name: 'Meeting Minutes' },
-        { id: 'detailed', name: 'Detailed Analysis' },
-        { id: 'action-plan', name: 'Action Plan' },
-        { id: 'study-notes', name: 'Study Notes' },
-        { id: 'key-points', name: 'Key Points Only' }
-    ];
+    const copyToClipboard = () => {
+        if (generatedNotes) {
+            navigator.clipboard.writeText(generatedNotes);
+        }
+    };
+
+
 
     return (
         <div id="notes" className="tab-content active" style={{ display: 'block' }}>
-            <div className="card">
-                <div className="card-header">
-                    <div className="card-title">
-                        <i className="fas fa-robot"></i>
-                        AI Notes Generator
+            <div className="card-header" style={{ marginBottom: '20px' }}>
+                <div className="card-title">
+                    <i className="fas fa-sparkles" style={{ color: 'var(--primary)' }}></i>
+                    AI Smart Notes
+                </div>
+            </div>
+
+            <div className="turbo-notes-wrapper">
+                {/* Header Controls */}
+                <div className="turbo-header">
+                    <div className="turbo-controls">
+                        <div className="turbo-select-wrapper">
+                            <i className="fas fa-file-audio turbo-select-icon"></i>
+                            <select
+                                className="turbo-select"
+                                value={selectedHistoryId}
+                                onChange={(e) => {
+                                    const id = e.target.value;
+                                    setSelectedHistoryId(id);
+                                    if (id === 'current') {
+                                        setCurrentTranscription(initialTranscription);
+                                    } else {
+                                        const item = history.find(h => h.id === id);
+                                        if (item) setCurrentTranscription(item.transcript);
+                                    }
+                                }}
+                            >
+                                <option value="current">Current Session {initialTranscription ? '(Ready)' : '(Empty)'}</option>
+                                {history.filter(h => h.type === 'transcription').map(item => (
+                                    <option key={item.id} value={item.id}>
+                                        {item.name || 'Untitled'} - {new Date(item.timestamp).toLocaleDateString()}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <button
+                            className="turbo-generate-btn"
+                            onClick={handleGenerate}
+                            disabled={loading}
+                        >
+                            {loading ? <i className="fas fa-circle-notch fa-spin"></i> : <i className="fas fa-magic"></i>}
+                            {loading ? 'Analyzing...' : 'Generate Notes'}
+                        </button>
                     </div>
-                    <div className="notes-info">
-                        <i className="fas fa-info-circle"></i>
-                        <span>Transform your transcriptions into organized, actionable notes</span>
-                    </div>
+                    {error && <div style={{ color: 'var(--danger)', fontWeight: '500' }}>{error}</div>}
                 </div>
 
-                <div className="notes-container-enhanced">
-                    <div className="notes-grid">
-                        <div className="notes-column">
-                            {/* Source Selection */}
-                            <div className="notes-section">
-                                <h3 className="section-title">
-                                    <i className="fas fa-file-alt"></i> Source Material
-                                </h3>
-                                <div className="source-selection">
-                                    <div className="form-group">
-                                        <select
-                                            className="form-control"
-                                            value={selectedHistoryId}
-                                            onChange={(e) => {
-                                                const id = e.target.value;
-                                                setSelectedHistoryId(id);
-                                                if (id === 'current') {
-                                                    setCurrentTranscription(initialTranscription);
-                                                } else {
-                                                    const item = history.find(h => h.id === id);
-                                                    if (item) setCurrentTranscription(item.transcript);
-                                                }
-                                            }}
-                                            style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}
-                                        >
-                                            <option value="current">Current Transcription {initialTranscription ? '(Available)' : '(Empty)'}</option>
-                                            {history.filter(h => h.type === 'transcription').map(item => (
-                                                <option key={item.id} value={item.id}>
-                                                    {item.name} - {new Date(item.timestamp).toLocaleDateString()}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
+                {/* Main Content Container with Glow */}
+                <div className="turbo-container">
+                    <div className="turbo-glow"></div>
+                    <div className="turbo-glow-2"></div>
 
-                            {/* Generation Controls */}
-                            <div className="generation-controls compact">
-                                <button
-                                    id="generateNotesBtn"
-                                    className="btn btn-primary btn-large"
-                                    onClick={handleGenerate}
-                                    disabled={loading}
-                                    style={{ width: '100%', marginBottom: '15px' }}
-                                >
-                                    {loading ? <i className="fas fa-spinner fa-spin"></i> : <i className="fas fa-magic"></i>}
-                                    {loading ? ' Generating Smart Notes...' : ' Generate Smart Notes'}
-                                </button>
-                                {error && <div style={{ color: 'red', marginTop: '10px' }}>{error}</div>}
-                            </div>
-                        </div>
+                    {generatedNotes && (
+                        <button className="turbo-copy-btn" onClick={copyToClipboard}>
+                            <i className="fas fa-copy"></i> Copy Markdown
+                        </button>
+                    )}
 
-                        <div className="notes-column">
-                            {/* Template Selection */}
-                            <div className="notes-section">
-                                <h3 className="section-title">
-                                    <i className="fas fa-palette"></i> Note Template
-                                </h3>
-                                <div className="form-group">
-                                    <select
-                                        className="form-control"
-                                        value={selectedTemplate}
-                                        onChange={(e) => setSelectedTemplate(e.target.value)}
-                                        style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}
-                                    >
-                                        {templates.map(t => (
-                                            <option key={t.id} value={t.id}>{t.name}</option>
-                                        ))}
-                                    </select>
+                    <div className="turbo-content" ref={notesRef}>
+                        {generatedNotes ? (
+                            <div
+                                dangerouslySetInnerHTML={{ __html: formatNotes(generatedNotes) }}
+                            />
+                        ) : (
+                            <div className="turbo-empty">
+                                <div className="turbo-empty-icon">
+                                    <i className="fas fa-brain"></i>
                                 </div>
+                                <h2>AI Knowledge Engine</h2>
+                                <p>Select a source transcription and let our advanced AI transform it into beautiful, structured notes with diagrams.</p>
                             </div>
-
-                            {/* Customization Options */}
-                            <div className="notes-section">
-                                <h3 className="section-title">
-                                    <i className="fas fa-cogs"></i> Customization
-                                </h3>
-                                <div className="form-group">
-                                    <label className="customization-label" style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>Custom Instructions (Optional)</label>
-                                    <textarea
-                                        className="manual-input"
-                                        style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0', minHeight: '80px' }}
-                                        placeholder="E.g., Focus on dates and financial figures..."
-                                        value={customInstructions}
-                                        onChange={e => setCustomInstructions(e.target.value)}
-                                    />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Results Display */}
-                    <div className="notes-section">
-                        <h3 className="section-title">
-                            <i className="fas fa-file-alt"></i> Generated Notes
-                        </h3>
-                        <div id="notesOutput" className="notes-output-enhanced">
-                            {generatedNotes ? (
-                                <div>
-                                    <div className="result-actions" style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginBottom: '10px' }}>
-                                        <button className="btn btn-outline" onClick={() => navigator.clipboard.writeText(generatedNotes)}>
-                                            <i className="fas fa-copy"></i> Copy
-                                        </button>
-                                    </div>
-                                    <div dangerouslySetInnerHTML={{ __html: formatEnhancedNotes(generatedNotes) }} />
-                                </div>
-                            ) : (
-                                <div className="output-placeholder">
-                                    <div className="placeholder-icon">
-                                        <i className="fas fa-lightbulb"></i>
-                                    </div>
-                                    <h3>Your AI-generated notes will appear here</h3>
-                                    <p>Select a source, choose a template, and click Generate.</p>
-                                </div>
-                            )}
-                        </div>
+                        )}
                     </div>
                 </div>
             </div>

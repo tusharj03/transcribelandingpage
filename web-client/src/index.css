@@ -1,6 +1,8 @@
+@import './App.css';
+@import './ai-notes.css';
+
 :root {
     /* === PRIMARY — Mid Blue from the logo === */
-    @import './App.css';
     --primary: #2D7FD3;
     /* main brand blue */
     --primary-dark: #1C5FA7;

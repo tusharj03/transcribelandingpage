@@ -1,0 +1,373 @@
+/* ========== TURBO AI STYLE NOTES ========== */
+
+/* Light Theme Variables for Notes Section - Matching App Aesthetic */
+.turbo-notes-wrapper {
+    --turbo-bg: #FFFFFF;
+    /* White */
+    --turbo-card: #F8FAFC;
+    /* Slate 50 */
+    --turbo-border: #E2E8F0;
+    /* Slate 200 */
+
+    /* REBRANDED: Blue/Teal Theme */
+    --turbo-primary: #2D7FD3;
+    /* Main Brand Blue */
+    --turbo-primary-glow: rgba(45, 127, 211, 0.15);
+    /* Softer glow for light mode */
+
+    --turbo-text: #1E293B;
+    /* Slate 800 - Main Text */
+    --turbo-text-dim: #64748B;
+    /* Slate 500 - Secondary Text */
+
+    --turbo-accent: #21B5C4;
+    /* Brand Teal */
+
+    font-family: 'Inter', sans-serif;
+    color: var(--turbo-text);
+    padding: 20px 0;
+}
+
+/* Header / Controls Area */
+.turbo-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    background: white;
+    padding: 20px;
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--gray-light);
+}
+
+.turbo-controls {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    flex: 1;
+}
+
+/* Styled Source Dropdown */
+.turbo-select-wrapper {
+    position: relative;
+    min-width: 300px;
+}
+
+.turbo-select {
+    width: 100%;
+    padding: 12px 16px 12px 40px;
+    border-radius: 12px;
+    border: 1px solid #e4e4e7;
+    background: #f4f4f5;
+    color: #18181b;
+    font-size: 14px;
+    font-weight: 500;
+    appearance: none;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.turbo-select:hover {
+    background: #e4e4e7;
+}
+
+.turbo-select:focus {
+    outline: none;
+    border-color: var(--turbo-primary);
+    box-shadow: 0 0 0 3px rgba(45, 127, 211, 0.1);
+}
+
+.turbo-select-icon {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #71717a;
+    pointer-events: none;
+}
+
+/* Generate Button - The "Magic" Element */
+.turbo-generate-btn {
+    /* Rebranded Gradient: Blue to Dark Blue */
+    background: linear-gradient(135deg, #2D7FD3 0%, #1C5FA7 100%);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 15px;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(45, 127, 211, 0.3);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.turbo-generate-btn:hover {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 8px 25px rgba(45, 127, 211, 0.5);
+}
+
+.turbo-generate-btn:disabled {
+    opacity: 0.7;
+    cursor: wait;
+    transform: none;
+}
+
+.turbo-generate-btn i {
+    font-size: 16px;
+}
+
+/* Content Container - The "Premium" Dark Mode Box */
+.turbo-container {
+    background: var(--turbo-bg);
+    border-radius: 24px;
+    position: relative;
+    overflow: hidden;
+    min-height: 600px;
+    box-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.5);
+    border: 1px solid var(--turbo-border);
+}
+
+/* Background Glow Effects - Rebranded for Light Mode */
+.turbo-glow {
+    position: absolute;
+    width: 600px;
+    height: 600px;
+    /* Primary Blue Glow - Subtle */
+    background: radial-gradient(circle, rgba(45, 127, 211, 0.08) 0%, rgba(255, 255, 255, 0) 70%);
+    top: -300px;
+    right: -100px;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.turbo-glow-2 {
+    position: absolute;
+    width: 500px;
+    height: 500px;
+    /* Accent Teal Glow - Subtle */
+    background: radial-gradient(circle, rgba(33, 181, 196, 0.08) 0%, rgba(255, 255, 255, 0) 70%);
+    bottom: -200px;
+    left: -100px;
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* Content Area */
+.turbo-content {
+    position: relative;
+    z-index: 1;
+    padding: 60px;
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+/* Typography for Notes */
+/* Typography for Notes */
+.turbo-content h1 {
+    font-size: 36px;
+    font-weight: 800;
+    /* Brand Gradient */
+    background: linear-gradient(135deg, #2D7FD3 0%, #21B5C4 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 40px;
+    letter-spacing: -0.02em;
+    padding-bottom: 20px;
+    border-bottom: 2px solid rgba(45, 127, 211, 0.1);
+}
+
+.turbo-content h2 {
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--turbo-primary);
+    margin-top: 40px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.turbo-content h3 {
+    font-size: 18px;
+    font-weight: 600;
+    color: #334155;
+    /* Slate 700 */
+    margin-top: 30px;
+    margin-bottom: 16px;
+}
+
+.turbo-content p {
+    font-size: 16px;
+    line-height: 1.8;
+    color: var(--turbo-text-dim);
+    margin-bottom: 24px;
+}
+
+.turbo-content ul,
+.turbo-content ol {
+    margin-bottom: 24px;
+    padding-left: 20px;
+}
+
+.turbo-content li {
+    font-size: 16px;
+    line-height: 1.8;
+    color: var(--turbo-text-dim);
+    margin-bottom: 10px;
+    position: relative;
+}
+
+.turbo-content ul li::marker {
+    color: var(--turbo-accent);
+    font-size: 1.2em;
+}
+
+/* V3 Polish: Highlighter Effect for Strong Text */
+.turbo-content strong {
+    background-color: rgba(33, 181, 196, 0.15);
+    /* Teal accent transparent */
+    color: #0e7490;
+    /* Darker teal text */
+    padding: 0 4px;
+    border-radius: 4px;
+    font-weight: 600;
+}
+
+/* V3 Polish: Card-like List Items */
+.turbo-content li {
+    background: white;
+    border: 1px solid #F1F5F9;
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin-bottom: 12px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+    font-size: 15px;
+    /* Slightly smaller for density */
+    color: var(--turbo-text);
+    transition: all 0.2s ease;
+}
+
+.turbo-content li:hover {
+    border-color: var(--turbo-primary);
+    transform: translateX(4px);
+    box-shadow: 0 4px 6px -1px rgba(45, 127, 211, 0.1);
+}
+
+.turbo-content blockquote {
+    border-left: 3px solid var(--turbo-accent);
+    /* Teal tint background */
+    background: rgba(33, 181, 196, 0.05);
+    padding: 20px 30px;
+    border-radius: 0 12px 12px 0;
+    margin: 30px 0;
+    font-style: italic;
+    color: #475569;
+    /* Slate 600 */
+}
+
+/* Table Styling for Comparisons */
+.turbo-content table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 30px 0;
+    border-radius: 12px;
+    overflow: hidden;
+    background: white;
+    border: 1px solid var(--turbo-border);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+}
+
+.turbo-content th,
+.turbo-content td {
+    padding: 16px;
+    text-align: left;
+    border-bottom: 1px solid var(--turbo-border);
+}
+
+.turbo-content th {
+    background: #F1F5F9;
+    /* Slate 100 */
+    color: var(--turbo-primary);
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 13px;
+    letter-spacing: 0.05em;
+}
+
+.turbo-content tr:last-child td {
+    border-bottom: none;
+}
+
+.turbo-content tr:hover td {
+    background: #F8FAFC;
+}
+
+
+/* Empty State */
+.turbo-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 600px;
+    color: var(--turbo-text-dim);
+    text-align: center;
+    position: relative;
+    z-index: 1;
+}
+
+.turbo-empty-icon {
+    font-size: 80px;
+    /* Rebranded Gradient */
+    background: linear-gradient(135deg, #2D7FD3 0%, #21B5C4 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 30px;
+    opacity: 0.9;
+}
+
+.turbo-empty h2 {
+    font-size: 28px;
+    color: var(--turbo-text);
+    margin-bottom: 12px;
+    font-weight: 700;
+}
+
+.turbo-empty p {
+    font-size: 16px;
+    max-width: 400px;
+    line-height: 1.6;
+}
+
+/* Copy Button */
+.turbo-copy-btn {
+    position: absolute;
+    top: 30px;
+    right: 30px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--turbo-text-dim);
+    padding: 10px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+    backdrop-filter: blur(10px);
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.turbo-copy-btn:hover {
+    background: white;
+    color: var(--turbo-primary);
+    border-color: var(--turbo-primary);
+    box-shadow: 0 2px 8px rgba(45, 127, 211, 0.15);
+}
