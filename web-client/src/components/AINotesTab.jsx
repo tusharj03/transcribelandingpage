@@ -213,7 +213,7 @@ export default function AINotesTab({ currentTranscription: initialTranscription,
             }
 
             setGeneratedNotes(analysis);
-            saveToHistory(`Smart Notes`, analysis, 'notes', 'turbo');
+            saveToHistory(`Smart Notes`, analysis, 'notes', 'Smart Model');
 
         } catch (err) {
             console.error(err);

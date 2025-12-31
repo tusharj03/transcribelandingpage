@@ -19,6 +19,9 @@ const ChatTab = ({ currentTranscription, user, onLoginRequest }) => {
     const [selectedHistoryId, setSelectedHistoryId] = useState('');
     const [contextText, setContextText] = useState('');
 
+    // Mobile History Toggle
+    const [showHistory, setShowHistory] = useState(false);
+
     const messagesEndRef = useRef(null);
 
     // --- Effects ---
@@ -194,58 +197,48 @@ const ChatTab = ({ currentTranscription, user, onLoginRequest }) => {
     // --- Render ---
 
     return (
-        <div id="chat" className="tab-content active" style={{ display: 'flex', height: 'calc(100vh - 140px)', gap: '20px', overflow: 'hidden' }}>
+        <div id="chat" className="tab-content active chat-tab-container">
+
+            {/* Mobile History Toggle Overlay */}
+            {showHistory && (
+                <div className="chat-history-overlay" onClick={() => setShowHistory(false)}></div>
+            )}
 
             {/* Sidebar (History) */}
-            <div className="chat-sidebar" style={{
-                width: '250px',
-                background: 'white',
-                borderRadius: '12px',
-                border: '1px solid #e2e8f0',
-                display: 'flex',
-                flexDirection: 'column',
-                flexShrink: 0
-            }}>
-                <div style={{ padding: '16px', borderBottom: '1px solid #f1f5f9' }}>
+            <div className={`chat-sidebar ${showHistory ? 'open' : ''}`}>
+                <div className="chat-sidebar-header">
                     <button
-                        className="btn btn-primary"
-                        style={{ width: '100%', borderRadius: '8px', justifyContent: 'center' }}
-                        onClick={loadNewChatState}
+                        className="btn btn-primary btn-new-chat"
+                        onClick={() => {
+                            loadNewChatState();
+                            if (window.innerWidth < 768) setShowHistory(false);
+                        }}
                     >
                         <i className="fas fa-plus"></i> New Chat
                     </button>
+                    <button className="btn-close-history" onClick={() => setShowHistory(false)}>
+                        <i className="fas fa-times"></i>
+                    </button>
                 </div>
 
-                <div className="recent-chats-list" style={{ flex: 1, overflowY: 'auto', padding: '10px' }}>
-                    <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '8px', fontWeight: '600', textTransform: 'uppercase' }}>Recent</div>
-                    {savedChats.length === 0 && <p style={{ fontSize: '13px', color: '#cbd5e1', textAlign: 'center', marginTop: '20px' }}>No history yet</p>}
+                <div className="recent-chats-list">
+                    <div className="recent-header">Recent</div>
+                    {savedChats.length === 0 && <p className="no-history-text">No history yet</p>}
 
                     {savedChats.map(chat => (
                         <div
                             key={chat.id}
                             className={`recent-chat-item ${currentChatId === chat.id ? 'active' : ''}`}
-                            onClick={() => loadChat(chat.id)}
-                            style={{
-                                padding: '10px 12px',
-                                borderRadius: '8px',
-                                cursor: 'pointer',
-                                marginBottom: '4px',
-                                background: currentChatId === chat.id ? '#eff6ff' : 'transparent',
-                                color: currentChatId === chat.id ? '#2D7FD3' : '#64748b',
-                                fontSize: '14px',
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'center',
-                                transition: 'all 0.2s',
-                                border: currentChatId === chat.id ? '1px solid #bfdbfe' : '1px solid transparent'
+                            onClick={() => {
+                                loadChat(chat.id);
+                                if (window.innerWidth < 768) setShowHistory(false);
                             }}
                         >
-                            <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1 }}>
+                            <span className="chat-item-title">
                                 {chat.title}
                             </span>
                             <i
                                 className="fas fa-trash-alt delete-chat-icon"
-                                style={{ fontSize: '12px', color: '#ef4444', opacity: 0.6, padding: '4px' }}
                                 onClick={(e) => deleteChat(e, chat.id)}
                             ></i>
                         </div>
@@ -254,19 +247,22 @@ const ChatTab = ({ currentTranscription, user, onLoginRequest }) => {
             </div>
 
             {/* Main Chat Area */}
-            <div className="card" style={{ flex: 1, display: 'flex', flexDirection: 'column', marginBottom: 0, height: '100%' }}>
-                <div className="card-header" style={{ flexShrink: 0 }}>
+            <div className="card chat-main-area">
+                <div className="card-header chat-header">
                     <div className="card-title">
+                        <button className="btn-mobile-history" onClick={() => setShowHistory(true)}>
+                            <i className="fas fa-bars"></i>
+                        </button>
                         <i className="fas fa-comments"></i>
                         Transcription Chat
                     </div>
                     <div className="chat-info">
                         <i className="fas fa-info-circle"></i>
-                        <span style={{ marginLeft: '8px' }}>Ask questions about your transcriptions</span>
+                        <span className="chat-info-text">Ask questions about your transcriptions</span>
                     </div>
                 </div>
 
-                <div className="chat-source-selection" style={{ margin: '0 20px 0 20px', flexShrink: 0 }}>
+                <div className="chat-source-selection">
                     <label>Context:</label>
                     <select
                         id="chatHistorySelect"
@@ -280,7 +276,7 @@ const ChatTab = ({ currentTranscription, user, onLoginRequest }) => {
                     {chatSource === 'history' && (
                         <select
                             id="chatSpecificHistory"
-                            style={{ display: 'block' }}
+                            className="chat-specific-history"
                             value={selectedHistoryId}
                             onChange={(e) => setSelectedHistoryId(e.target.value)}
                         >
@@ -294,14 +290,14 @@ const ChatTab = ({ currentTranscription, user, onLoginRequest }) => {
                     )}
                 </div>
 
-                <div className="transcription-context" style={{ padding: '0 20px', marginBottom: '10px', flexShrink: 0 }}>
-                    <p style={{ fontSize: '12px', color: '#94a3b8', margin: 0 }}>
+                <div className="transcription-context">
+                    <p className="context-indicator">
                         {contextText ? `Using context (${contextText.length} chars)` : 'No context selected'}
                     </p>
                 </div>
 
-                <div className="chat-container" style={{ flex: 1, overflowY: 'auto', paddingBottom: '20px', paddingLeft: '20px', paddingRight: '20px' }}>
-                    <div id="chatHistory" className="chat-history" style={{ marginBottom: 0 }}>
+                <div className="chat-container">
+                    <div id="chatHistory" className="chat-history">
                         {messages.map((msg, idx) => (
                             <div key={idx} className={`chat-message ${msg.role === 'user' ? 'user' : 'bot'}`}>
                                 <div className="message-content">
@@ -322,33 +318,19 @@ const ChatTab = ({ currentTranscription, user, onLoginRequest }) => {
                     </div>
                 </div>
 
-                <div className="chat-input-container" style={{ padding: '20px', borderTop: '1px solid #f1f5f9', background: 'white', borderBottomLeftRadius: '12px', borderBottomRightRadius: '12px', display: 'flex', gap: '10px', alignItems: 'center' }}>
+                <div className="chat-input-container">
                     <textarea
                         id="chatInput"
                         placeholder="Ask away..."
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                         onKeyDown={handleKeyPress}
-                        style={{ minHeight: '50px', borderRadius: '12px', flex: 1 }}
                     ></textarea>
                     <button
                         id="sendChatBtn"
+                        className="btn-send-chat"
                         onClick={handleSend}
                         disabled={loading}
-                        style={{
-                            width: '50px',
-                            height: '50px',
-                            borderRadius: '12px',
-                            padding: '0',
-                            background: '#2D7FD3',
-                            color: 'white',
-                            border: 'none',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            justifyContent: 'center',
-                            alignItems: 'center',
-                            fontSize: '18px'
-                        }}
                     >
                         <i className="fas fa-paper-plane"></i>
                     </button>

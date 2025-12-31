@@ -32,7 +32,7 @@ Rules:
 3. Distractors should be plausible.
 `;
 
-export default function FlashcardsTab({ currentTranscription }) {
+export default function FlashcardsTab({ currentTranscription, user, onLoginRequest }) {
     const [cards, setCards] = useState([]);
     const [status, setStatus] = useState('idle'); // 'idle', 'generating', 'review', 'empty'
 
@@ -46,6 +46,8 @@ export default function FlashcardsTab({ currentTranscription }) {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [isFlipped, setIsFlipped] = useState(false);
     const [error, setError] = useState(null);
+
+    const [quizComplete, setQuizComplete] = useState(false);
 
     // Load History on Mount
     useEffect(() => {
@@ -68,6 +70,11 @@ export default function FlashcardsTab({ currentTranscription }) {
     };
 
     const handleGenerate = async () => {
+        if (!user || (!user.authenticated && !user.offlineMode)) {
+            onLoginRequest();
+            return;
+        }
+
         const transcript = getActiveTranscript();
         if (!transcript) {
             setError("No transcript selected.");
@@ -79,6 +86,7 @@ export default function FlashcardsTab({ currentTranscription }) {
         setCards([]);
         setQuizAnswers({});
         setQuizResults({});
+        setQuizComplete(false);
         setCurrentIndex(0);
 
         try {
@@ -131,17 +139,6 @@ export default function FlashcardsTab({ currentTranscription }) {
         if (mode === 'flashcards') setIsFlipped(!isFlipped);
     };
 
-    const handleRate = (rating) => {
-        // Flashcard Loop
-        setIsFlipped(false);
-        if (currentIndex < cards.length - 1) {
-            setTimeout(() => setCurrentIndex(currentIndex + 1), 150);
-        } else {
-            alert("Session Complete!");
-            setCurrentIndex(0);
-        }
-    };
-
     const handleQuizOption = (option) => {
         const currentCard = cards[currentIndex];
         const isCorrect = option === currentCard.answer;
@@ -157,13 +154,24 @@ export default function FlashcardsTab({ currentTranscription }) {
     const handleNextCard = () => {
         if (currentIndex < cards.length - 1) {
             setCurrentIndex(currentIndex + 1);
+            setIsFlipped(false);
+        } else if (mode === 'quiz') {
+            setQuizComplete(true);
         }
     };
 
     const handlePrevCard = () => {
         if (currentIndex > 0) {
             setCurrentIndex(currentIndex - 1);
+            setIsFlipped(false);
         }
+    };
+
+    const restartQuiz = () => {
+        setQuizAnswers({});
+        setQuizResults({});
+        setQuizComplete(false);
+        setCurrentIndex(0);
     };
 
     // --- Render Helpers ---
@@ -248,7 +256,7 @@ export default function FlashcardsTab({ currentTranscription }) {
                             <h2>Study Session</h2>
                             <p>Card {currentIndex + 1} of {cards.length}</p>
                         </div>
-                        <button onClick={handleGenerate} style={{ height: '36px', padding: '0 16px', fontSize: '13px', borderRadius: '50px', background: '#2D7FD3', color: 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <button className="btn-force-small btn-new-deck" onClick={handleGenerate}>
                             New Deck
                         </button>
                     </div>
@@ -265,18 +273,23 @@ export default function FlashcardsTab({ currentTranscription }) {
                                 <div className="card-content">{currentCard.back}</div>
                             </div>
                         </div>
-                        <div className={`review-controls ${isFlipped ? 'visible' : ''}`}>
-                            <button className="btn-rating again" onClick={() => handleRate('again')}>
-                                <span className="rating-label">Again</span>
+
+                        {/* Simplified Navigation Controls */}
+                        <div className="flashcard-nav-controls">
+                            <button
+                                className="btn btn-outline"
+                                disabled={currentIndex === 0}
+                                onClick={handlePrevCard}
+                            >
+                                <i className="fas fa-arrow-left"></i> Previous
                             </button>
-                            <button className="btn-rating hard" onClick={() => handleRate('hard')}>
-                                <span className="rating-label">Hard</span>
-                            </button>
-                            <button className="btn-rating good" onClick={() => handleRate('good')}>
-                                <span className="rating-label">Good</span>
-                            </button>
-                            <button className="btn-rating easy" onClick={() => handleRate('easy')}>
-                                <span className="rating-label">Easy</span>
+                            <span className="card-counter">{currentIndex + 1} / {cards.length}</span>
+                            <button
+                                className="btn btn-primary"
+                                disabled={currentIndex === cards.length - 1}
+                                onClick={handleNextCard}
+                            >
+                                Next <i className="fas fa-arrow-right"></i>
                             </button>
                         </div>
                     </div>
@@ -286,6 +299,41 @@ export default function FlashcardsTab({ currentTranscription }) {
 
         // Quiz Mode
         if (mode === 'quiz') {
+            if (quizComplete) {
+                const correctCount = Object.values(quizResults).filter(Boolean).length;
+                const score = Math.round((correctCount / cards.length) * 100);
+
+                return (
+                    <div className="flashcards-container">
+                        <div className="flashcards-header">
+                            <div className="flashcards-title">
+                                <h2>Quiz Results</h2>
+                                <p>Score: {score}%</p>
+                            </div>
+                            <button className="btn-force-small btn-new-quiz" onClick={handleGenerate}>
+                                New Quiz
+                            </button>
+                        </div>
+
+                        <div className="quiz-results-container">
+                            <div className="quiz-score-circle">
+                                <div className="score-number">{correctCount}/{cards.length}</div>
+                                <div className="score-label">Correct</div>
+                            </div>
+
+                            <div className="quiz-actions" style={{ marginTop: '2rem', display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+                                <button className="btn btn-outline" onClick={restartQuiz}>
+                                    <i className="fas fa-redo"></i> Retake Quiz
+                                </button>
+                                <button className="btn btn-primary" onClick={handleGenerate}>
+                                    <i className="fas fa-sparkles"></i> Generate New
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
             const currentQ = cards[currentIndex];
             const answer = quizAnswers[currentIndex];
             const isAnswered = answer !== undefined;
@@ -298,15 +346,15 @@ export default function FlashcardsTab({ currentTranscription }) {
                             <h2>Knowledge Check</h2>
                             <p>Question {currentIndex + 1} of {cards.length}</p>
                         </div>
-                        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                        <div className="flashcards-quiz-header-actions">
                             {renderProgressBar()}
-                            <button onClick={handleGenerate} style={{ marginLeft: '10px', height: '36px', padding: '0 16px', fontSize: '13px', borderRadius: '50px', background: '#2D7FD3', color: 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <button className="btn-force-small btn-new-quiz" onClick={handleGenerate}>
                                 New
                             </button>
                         </div>
                     </div>
 
-                    <div className="quiz-container" style={{ margin: '0 auto' }}>
+                    <div className="quiz-container">
                         <div className="quiz-question-card">
                             <div className="quiz-question">{currentQ.question}</div>
                         </div>
@@ -344,9 +392,13 @@ export default function FlashcardsTab({ currentTranscription }) {
                                 <i className="fas fa-chevron-left"></i> Previous
                             </button>
 
-                            {isAnswered && currentIndex < cards.length - 1 && (
+                            {isAnswered && (
                                 <button className="btn btn-primary" onClick={handleNextCard} style={{ background: 'var(--primary)', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '8px' }}>
-                                    Next <i className="fas fa-chevron-right"></i>
+                                    {currentIndex < cards.length - 1 ? (
+                                        <>Next <i className="fas fa-chevron-right"></i></>
+                                    ) : (
+                                        <>Finish Quiz <i className="fas fa-flag-checkered"></i></>
+                                    )}
                                 </button>
                             )}
                         </div>
@@ -368,14 +420,14 @@ export default function FlashcardsTab({ currentTranscription }) {
 
             {renderControls()}
 
-            <div className="flashcards-empty" style={{ padding: '40px', background: '#f8fafc', borderRadius: '16px' }}>
-                <i className={`fas ${mode === 'quiz' ? 'fa-list-ul' : 'fa-layer-group'}`} style={{ color: '#2D7FD3' }}></i>
+            <div className="flashcards-empty">
+                <i className={`fas ${mode === 'quiz' ? 'fa-list-ul' : 'fa-layer-group'}`}></i>
                 <h3>Ready to {mode === 'quiz' ? 'Take a Quiz' : 'Study Cards'}?</h3>
-                <p style={{ marginBottom: '24px' }}>
+                <p className="flashcards-empty-text">
                     Click below to generate a {mode === 'quiz' ? 'multiple-choice quiz' : 'flashcard deck'} from the selected transcript.
                 </p>
 
-                <button onClick={handleGenerate} style={{ margin: '0 auto', height: '36px', padding: '0 20px', fontSize: '13px', borderRadius: '50px', background: '#2D7FD3', color: 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: 'auto', width: 'auto' }}>
+                <button className="btn-force-small btn-main-generate" onClick={handleGenerate}>
                     Generate {mode === 'quiz' ? 'Quiz' : 'Deck'}
                 </button>
 

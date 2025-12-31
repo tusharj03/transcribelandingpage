@@ -1803,6 +1803,8 @@ function App() {
           {activeTab === 'flashcards' && (
             <FlashcardsTab
               currentTranscription={transcription}
+              user={user}
+              onLoginRequest={() => setShowLoginModal(true)}
             />
           )}
         </div>

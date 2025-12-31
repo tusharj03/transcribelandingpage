@@ -168,7 +168,7 @@ export default function HistoryTab({ onLoadTranscription }) {
                                 <div className="file-info-enhanced">
                                     <div className="file-name-enhanced">{item.name}</div>
                                     <div className="file-size-enhanced">
-                                        {new Date(item.timestamp).toLocaleString()} • {item.model || 'AI'}
+                                        {new Date(item.timestamp).toLocaleString()} • {(item.model === 'turbo' ? 'Smart Model' : item.model) || 'AI'}
                                     </div>
                                 </div>
                                 <div className="file-actions-enhanced" style={{ display: 'flex', gap: '5px' }}>
