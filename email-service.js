@@ -7,6 +7,11 @@ class EmailService {
         this.initializeTransporter();
     }
 
+    get senderEmail() {
+        return process.env.SMTP_FROM || 'help.resonote@gmail.com';
+    }
+
+
     initializeTransporter() {
         // Try multiple email service configurations
         const configs = [
@@ -59,7 +64,7 @@ class EmailService {
         const verificationUrl = `${process.env.BASE_URL || 'https://resonote-ai.vercel.app'}/verify-email.html?token=${token}`;
 
         const mailOptions = {
-            from: process.env.SMTP_FROM || 'tusharj2004@gmail.com',
+            from: this.senderEmail,
             to: email,
             subject: 'Verify Your Resonote Account',
             html: this.getVerificationTemplate(verificationUrl)
@@ -72,7 +77,7 @@ class EmailService {
         const resetUrl = `${process.env.BASE_URL || 'https://resonote-ai.vercel.app'}/reset-password.html?token=${token}`;
 
         const mailOptions = {
-            from: process.env.SMTP_FROM || 'tusharj2004@gmail.com',
+            from: this.senderEmail,
             to: email,
             subject: 'Reset Your Password - Resonote',
             html: this.getPasswordResetTemplate(resetUrl)
@@ -83,9 +88,9 @@ class EmailService {
 
     async sendContactEmail(name, fromEmail, message) {
         const mailOptions = {
-            from: process.env.SMTP_FROM || 'tusharj2004@gmail.com', // Sender address (setup dependent, often must be same as auth user)
+            from: this.senderEmail, // Sender address (setup dependent, often must be same as auth user)
             replyTo: fromEmail, // Reply to the person who filled the form
-            to: 'tusharj2004@gmail.com', // Your email
+            to: 'help.resonote@gmail.com', // Your email
             subject: `New Contact Form Message from ${name}`,
             html: this.getContactEmailTemplate(name, fromEmail, message)
         };
