@@ -5,33 +5,34 @@ const Sidebar = ({
     user, onLogin, onLogout, isOpen, onClose,
     translationEnabled, setTranslationEnabled,
     targetLang, setTargetLang,
-    translationStatus, translationProgress, translatorReady
+    translationStatus, translationProgress, translatorReady,
+    nativeHostConnected
 }) => {
     return (
         <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
             <button className="sidebar-close-btn" onClick={onClose}>
                 <i className="fas fa-times"></i>
             </button>
-            <div className="sidebar-header">
+            <div className="sidebar-header" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                 <div className="logo-container">
                     <img src="/icons/resonote1795x512.png" alt="Resonote" className="logo-img" />
                 </div>
-            </div>
-
-            <div className="sidebar-cta">
-                <button
-                    className="btn-rapid-cta"
-                    onClick={onRapidTranscribe}
-                    title="Rapid Transcribe"
-                >
-                    <div className="rapid-icon-circle">
-                        <i className="fa-solid fa-bolt"></i>
+                {nativeHostConnected && (
+                    <div className="native-badge-sidebar" style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '4px 10px',
+                        background: '#dcfce7',
+                        color: '#166534',
+                        borderRadius: '100px',
+                        fontSize: '11px',
+                        fontWeight: '600',
+                        marginTop: '12px'
+                    }}>
+                        <i className="fas fa-check-circle"></i> Download Connected
                     </div>
-                    <div className="rapid-text">
-                        <span className="rapid-title">Rapid Transcribe</span>
-                        <span className="rapid-subtitle">Instant Web Capture</span>
-                    </div>
-                </button>
+                )}
             </div>
 
             <nav className="sidebar-nav">

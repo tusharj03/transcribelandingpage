@@ -297,7 +297,7 @@ export function useLiveNotes({ isRecording, transcription }) {
 
     // Generate notes from full transcript (for File mode)
     const generateFullNotes = async (fullTranscript) => {
-        if (!fullTranscript?.trim()) return;
+        if (!fullTranscript?.trim()) return null;
         setStatus('generating');
 
         // We might need to chunk if too large, but for now let's try direct
@@ -313,6 +313,8 @@ export function useLiveNotes({ isRecording, transcription }) {
             }
         ];
 
+        let result = null;
+
         try {
             const response = await fetch('/api/llm', {
                 method: 'POST',
@@ -326,11 +328,13 @@ export function useLiveNotes({ isRecording, transcription }) {
                 clean = clean.replace(/^(Here|Sure|Okay|I have).*?:/im, '').trim();
                 clean = clean.replace(/\n{2,}/g, '\n').replace(/([^\n])\n(### )/g, '$1\n\n$2');
                 applyNormalizedNotes(clean);
+                result = clean;
             }
         } catch (e) {
             console.error(e);
         }
         setStatus('idle');
+        return result;
     };
 
     // Finalize

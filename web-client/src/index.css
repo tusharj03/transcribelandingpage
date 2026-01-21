@@ -567,7 +567,7 @@ h1 {
 .drop-zone-enhanced {
     border: 2px dashed #cbd5e1;
     border-radius: 20px;
-    padding: 80px 40px;
+    padding: 40px 40px;
     text-align: center;
     margin-bottom: 40px;
     cursor: pointer;
@@ -796,7 +796,7 @@ h1 {
     background: white;
     border: 1px solid #e2e8f0;
     border-radius: 16px;
-    padding: 24px;
+    padding: 16px;
     cursor: pointer;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
@@ -875,15 +875,15 @@ h1 {
 
 .model-info {
     border-top: 1px solid var(--gray-light);
-    padding-top: 16px;
+    padding-top: 12px;
 }
 
 .model-desc {
     font-size: 14px;
     color: var(--gray);
-    line-height: 1.6;
-    margin-bottom: 16px;
-    min-height: 44px;
+    line-height: 1.5;
+    margin-bottom: 0;
+    min-height: auto;
 }
 
 .model-tags {
@@ -4490,7 +4490,7 @@ h1 {
     flex: 1;
     height: 100vh;
     overflow-y: auto;
-    padding: 32px 48px;
+    padding: 0px 48px 32px 48px;
     position: relative;
 }
 
@@ -5296,4 +5296,54 @@ h1 {
         width: 44px;
         height: 44px;
     }
+}
+
+/* Markdown Content Styling for Notes */
+.notes-content ul,
+.notes-content ol {
+    padding-left: 24px;
+    margin-bottom: 12px;
+    list-style-position: outside;
+}
+
+.notes-content ul {
+    list-style-type: disc;
+}
+
+.notes-content ol {
+    list-style-type: decimal;
+}
+
+.notes-content li {
+    margin-bottom: 6px;
+    padding-left: 4px;
+    /* small space from bullet */
+}
+
+/* Ensure sub-bullets are indented */
+.notes-content ul ul,
+.notes-content ol ol,
+.notes-content ul ol,
+.notes-content ol ul {
+    margin-top: 6px;
+    margin-bottom: 0;
+    margin-left: 12px;
+    /* Indent sub-bullets inwards */
+    padding-left: 20px;
+}
+
+.notes-content ul ul {
+    list-style-type: circle;
+}
+
+.notes-content ul ul ul {
+    list-style-type: square;
+}
+
+/* Headers in notes */
+.notes-content h3 {
+    margin-top: 16px;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: var(--dark);
 }

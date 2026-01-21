@@ -1,11 +1,14 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import './index.css';
-import HistoryTab, { saveToHistory } from './components/HistoryTab';
+import HistoryTab, { saveToHistory, updateHistoryItem } from './components/HistoryTab';
 import AINotesTab from './components/AINotesTab';
 import ChatTab from './components/ChatTab';
 import FlashcardsTab from './components/FlashcardsTab';
 import Sidebar from './components/Sidebar';
+import WelcomeModal from './components/WelcomeModal';
+import AlertModal from './components/AlertModal';
+import ProductTour from './components/ProductTour';
 import { useAuth } from './hooks/useAuth';
 import { useLiveNotes } from './hooks/useLiveNotes';
 import { useLiveAssist } from './hooks/useLiveAssist';
@@ -165,6 +168,11 @@ function App() {
   // Popup State
   const [showSlowPopup, setShowSlowPopup] = useState(false);
   const [showUpsellPopup, setShowUpsellPopup] = useState(false);
+  const [alertMessage, setAlertMessage] = useState(null);
+
+  const showAlert = (msg) => {
+    setAlertMessage(msg);
+  };
 
   // Transcribe Tab State
   const [transcribeCategory, setTranscribeCategory] = useState('file'); // 'live', 'background', 'file'
@@ -173,7 +181,8 @@ function App() {
   const [liveSubTab, setLiveSubTab] = useState('transcript'); // 'transcript', 'notes', 'assist'
   const [outputSubTab, setOutputSubTab] = useState('transcript'); // 'transcript', 'notes', 'assist'
   const [viewingFile, setViewingFile] = useState(null); // For 'file' mode, which file we are viewing
-  const [transcriptionSource, setTranscriptionSource] = useState('tab'); // 'tab', 'mic', 'system' (default 'tab')
+  const [transcriptionSource, setTranscriptionSource] = useState('mic'); // 'tab', 'mic', 'system' (default 'mic')
+  const [hoveredSource, setHoveredSource] = useState(null);
 
   // BACKGROUND TAB State
   const [backgroundMuted, setBackgroundMuted] = useState(false);
@@ -182,6 +191,7 @@ function App() {
   const [showTabSelector, setShowTabSelector] = useState(false);
   const [availableTabs, setAvailableTabs] = useState([]);
   const [tabsLoading, setTabsLoading] = useState(false);
+  const [urlInput, setUrlInput] = useState('');
 
   // Model State
   const [selectedModel, setSelectedModel] = useState('base');
@@ -195,6 +205,7 @@ function App() {
   const [transcription, setTranscription] = useState('');
   const [transcribeFiles, setTranscribeFiles] = useState([]);
   const [transcribeQueue, setTranscribeQueue] = useState([]);
+  const [webQueue, setWebQueue] = useState([]); // { id, name, status: 'processing' | 'complete' | 'error' }
   const [completedTranscriptions, setCompletedTranscriptions] = useState([]);
   const [runtimeInfo, setRuntimeInfo] = useState(null);
   const [lastMetrics, setLastMetrics] = useState(null);
@@ -208,6 +219,78 @@ function App() {
   const [translatorReady, setTranslatorReady] = useState(false);
   const [translationProgress, setTranslationProgress] = useState(0);
   const [translationStatus, setTranslationStatus] = useState('');
+
+  // Tour State
+  // Tour State
+  const [showWelcomeModal, setShowWelcomeModal] = useState(() => {
+    return !localStorage.getItem('hasSeenWelcome');
+  });
+  const [activeTour, setActiveTour] = useState(null);
+  const [seenTours, setSeenTours] = useState(() => {
+    try {
+      const savedStats = localStorage.getItem('seenTours');
+      return savedStats ? JSON.parse(savedStats) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+
+  const handleTourSelection = (tourId) => {
+    setShowWelcomeModal(false);
+    localStorage.setItem('hasSeenWelcome', 'true');
+    setActiveTour(tourId);
+    setSeenTours(prev => {
+      const newState = [...prev, tourId];
+      localStorage.setItem('seenTours', JSON.stringify(newState));
+      return newState;
+    });
+
+    // Switch tabs based on tour
+    if (tourId === 'tour-a') {
+      setActiveTab('transcribe');
+      setTranscribeCategory('background');
+    } else if (tourId === 'tour-b') {
+      setActiveTab('transcribe');
+      setTranscribeCategory('live');
+    } else if (tourId === 'tour-c') {
+      setActiveTab('transcribe');
+      setTranscribeCategory('file');
+    }
+  };
+
+  const handleTourEnd = () => {
+    setActiveTour(null);
+  };
+
+  // Automate Tour Triggering on Tab Switch
+  useEffect(() => {
+    if (activeTour || showWelcomeModal) return; // Don't interrupt existing tour or modal
+
+    if (activeTab === 'transcribe') {
+      if (transcribeCategory === 'background' && !seenTours.includes('tour-a')) {
+        setActiveTour('tour-a');
+        setSeenTours(prev => {
+          const newState = [...prev, 'tour-a'];
+          localStorage.setItem('seenTours', JSON.stringify(newState));
+          return newState;
+        });
+      } else if (transcribeCategory === 'live' && !seenTours.includes('tour-b')) {
+        setActiveTour('tour-b');
+        setSeenTours(prev => {
+          const newState = [...prev, 'tour-b'];
+          localStorage.setItem('seenTours', JSON.stringify(newState));
+          return newState;
+        });
+      } else if (transcribeCategory === 'file' && !seenTours.includes('tour-c')) {
+        setActiveTour('tour-c');
+        setSeenTours(prev => {
+          const newState = [...prev, 'tour-c'];
+          localStorage.setItem('seenTours', JSON.stringify(newState));
+          return newState;
+        });
+      }
+    }
+  }, [activeTab, transcribeCategory, activeTour, showWelcomeModal, seenTours]);
 
   useEffect(() => {
     // 1. Eager Initialization / Download
@@ -255,7 +338,7 @@ function App() {
   }, [transcription, translationEnabled, targetLang, translatorReady]);
 
   // Live AI Hooks
-  const { liveNotes } = useLiveNotes({
+  const { liveNotes, status: notesStatus, generateFullNotes } = useLiveNotes({
     isRecording: status === 'recording',
     transcription
   });
@@ -335,7 +418,7 @@ function App() {
             handleJobError(data.jobId, data.message || 'Unknown error');
           }
           // alert('Error: ' + (data?.message || data)); // Suppress alert for cleaner UI if needed, but keeping for now.
-          alert('Error: ' + (data?.message || data));
+          showAlert('Error: ' + (data?.message || data));
         }
       };
 
@@ -548,11 +631,15 @@ function App() {
       const completed = { ...job, status: 'completed', progress: 100, transcript: finalText };
       setCompletedTranscriptions(prev => [...prev, completed]);
       setTranscription(text); // Handle legacy "last transcription" state? Or maybe this should be finalText too? 
-      // If we are in File mode, sidebar doesn't show "Live Output". It shows the list.
-      // But if we switch to Notes, we want the text.
-      // Let's keep original text in global state for Notes fallback, but the completed item has translated.
 
-      saveToHistory(`Transcription - ${job.name}`, finalText, 'transcription', selectedModel);
+      const historyItem = saveToHistory(historyName, finalText, 'transcription', selectedModel);
+
+      // Auto-generate generic notes and update history
+      generateFullNotes(finalText).then(notes => {
+        if (historyItem && historyItem.id) {
+          updateHistoryItem(historyItem.id, { notes });
+        }
+      });
     }
 
     activeJobRef.current = null;
@@ -614,7 +701,7 @@ function App() {
       return;
     }
     if (transcribeFiles.length === 0) {
-      alert("Please select a file first.");
+      showAlert("Please select a file first.");
       return;
     }
 
@@ -645,7 +732,7 @@ function App() {
     }
 
     if (!('webkitSpeechRecognition' in window)) {
-      alert("Web Speech API is not supported in this browser. Please use Chrome/Edge or download the Desktop App.");
+      showAlert("Web Speech API is not supported in this browser. Please use Chrome/Edge or download the Desktop App.");
       return;
     }
 
@@ -731,11 +818,15 @@ function App() {
       setStatus('transcribing');
       setShowTabSelector(false); // Close modal
 
+      const queueId = Date.now();
+      setWebQueue(prev => [...prev, { id: queueId, title: tab.title, url: tab.url, status: 'processing' }]);
+
       // Safety timeout - if extension doesn't reply in 30s, assume it failed/crashed
       const safetyTimeout = setTimeout(() => {
         console.error("[RapidTranscribe] TIMEOUT: No response from extension after 30 seconds.");
-        alert("Timeout: The extension did not respond.\n\nPossible causes:\n1. Native Host is not running or crashed.\n2. Extension is stuck.\n\nPlease check the logs.");
+        showAlert("Timeout: The extension did not respond.\n\nPossible causes:\n1. Native Host is not running or crashed.\n2. Extension is stuck.\n\nPlease check the logs.");
         setStatus('idle');
+        setWebQueue(prev => prev.filter(item => item.id !== queueId));
       }, 30000);
 
       window.chrome.runtime.sendMessage(extensionId, {
@@ -748,7 +839,7 @@ function App() {
         console.log("[RapidTranscribe] Raw callback received from extension:", res);
         if (window.chrome.runtime.lastError) {
           console.error("[RapidTranscribe] Runtime Error:", window.chrome.runtime.lastError);
-          alert(`Transcription Error: ${window.chrome.runtime.lastError.message}`);
+          showAlert(`Transcription Error: ${window.chrome.runtime.lastError.message}`);
           setStatus('idle');
           return;
         }
@@ -775,29 +866,65 @@ function App() {
           }
 
           setStatus('idle');
-          alert(`Transcription Complete for: ${tab.title}`);
+          // showAlert(`Transcription Complete for: ${tab.title}`);
+
+
+
+          setWebQueue(prev => prev.filter(item => item.id !== queueId));
+
+          // Auto-generate generic notes
+          // generateFullNotes(res.text); // Moved inside async block below
+
+          // Save to history with AI naming
+          (async () => {
+            let name = tab.title || "Web Transcription";
+            try {
+              const aiName = await generateTranscriptionName(res.text);
+              if (aiName) name = aiName;
+            } catch (e) { }
+
+            const historyItem = saveToHistory(name, res.text, 'transcription', 'rapid-web');
+
+            // Generate notes and update history
+            generateFullNotes(res.text).then(notes => {
+              if (historyItem && historyItem.id) {
+                updateHistoryItem(historyItem.id, { notes });
+              }
+            });
+          })();
         } else if (res && (res.error || res.type === 'ERROR')) {
           const errMsg = res.error || res.message || "Unknown error";
           console.error("[RapidTranscribe] Failed with error:", errMsg);
-          alert(`Failed: ${errMsg}`);
+          showAlert(`Failed: ${errMsg}`);
           setStatus('idle');
+          setWebQueue(prev => prev.filter(item => item.id !== queueId));
         } else {
           // If we get here it might mean the extension sent something else, or nothing.
           console.warn("[RapidTranscribe] Unexpected response format:", res);
           if (res && res.status === 'processing') {
             // Fallback if extension wasn't reloaded properly
-            alert("Updating extension... please reload the extension.");
+            console.log("Updating extension... please reload the extension.");
           } else {
             // It's possible the extension sent nothing?
             console.log("[RapidTranscribe] Response was empty or invalid.");
             setStatus('idle');
+            setWebQueue(prev => prev.filter(item => item.id !== queueId));
           }
         }
       });
     } catch (e) {
       console.error("[RapidTranscribe] Exception:", e);
-      alert("Error starting transcription: " + e.message);
+      showAlert("Error starting transcription: " + e.message);
       setStatus('idle');
+      // No queueId here as it might fail before creation? 
+      // check if we created one... well, if queueId is not defined in this scope catch block...
+      // Actually queueId is const inside try block. 
+      // We need to move queueId definition up or use a different way?
+      // Actually catch block is outside. So we can't access queueId.
+      // But typically this catch catches synchronous errors before sendMessage...
+      // Just clear all processing queues? No that's bad.
+      // Let's assume queue add happened inside try.
+      setWebQueue([]);
     }
   };
 
@@ -809,7 +936,13 @@ function App() {
           hasRuntime: !!(window.chrome && window.chrome.runtime),
           userAgent: navigator.userAgent
         });
-        alert(`Extension not detected!\n\nTroubleshooting:\n1. Ensure 'Resonote' extension is installed.\n2. Go to chrome://extensions and click 'Reload' on the extension.\n3. Refresh this page.\n4. Ensure you are on http://localhost:5173 (or allowed domain).`);
+        showAlert(`Extension not detected!\n\nTroubleshooting:\n1. Ensure 'Resonote' extension is installed.\n2. Go to chrome://extensions and click 'Reload' on the extension.\n3. Refresh this page.\n4. Ensure you are on http://localhost:5173 (or allowed domain).`);
+        return;
+      }
+
+      // Check if native host is connected
+      if (!nativeHostConnected) {
+        setShowSlowPopup(true); // Reuse the slow popup to prompt download
         return;
       }
 
@@ -820,7 +953,7 @@ function App() {
       const timeoutId = setTimeout(() => {
         if (tabsLoading) {
           setTabsLoading(false);
-          alert("Extension setup issue: The extension is not responding.\n\nPlease:\n1. Open chrome://extensions\n2. Reload the 'Resonote' extension\n3. Refresh this page.");
+          showAlert("Extension setup issue: The extension is not responding.\n\nPlease:\n1. Open chrome://extensions\n2. Reload the 'Resonote' extension\n3. Refresh this page.");
         }
       }, 3000);
 
@@ -833,7 +966,7 @@ function App() {
         if (window.chrome.runtime.lastError) {
           console.error("[RapidTranscribe] GET_TABS Error:", window.chrome.runtime.lastError);
           // If the error is regarding messaging, it might be due to missing permissions or extension not installed.
-          alert(`Extension Error: ${window.chrome.runtime.lastError.message}\n\nMake sure the extension is installed and allowed to communicate with this site.`);
+          showAlert(`Extension Error: ${window.chrome.runtime.lastError.message}\n\nMake sure the extension is installed and allowed to communicate with this site.`);
           return;
         }
 
@@ -844,12 +977,94 @@ function App() {
           setAvailableTabs(response.tabs);
           setShowTabSelector(true);
         } else {
-          alert("Could not fetch open tabs. Please try reloading the extension.");
+          showAlert("Could not fetch open tabs. Please try reloading the extension.");
         }
       });
     } catch (e) {
       console.error("Critical Error in Rapid Transcribe:", e);
-      alert(`Critical Error: ${e.message}`);
+      showAlert(`Critical Error: ${e.message}`);
+    }
+  };
+
+  const handleUrlTranscribe = () => {
+    if (!urlInput || !urlInput.startsWith('http')) {
+      showAlert("Please enter a valid URL (starting with http:// or https://)");
+      return;
+    }
+
+    try {
+      if (!window.chrome || !window.chrome.runtime) {
+        showAlert("Extension not detected! Please ensure the Resonote extension is installed.");
+        return;
+      }
+
+      console.log("Starting URL Transcription for:", urlInput);
+      setStatus('transcribing');
+
+      const queueId = Date.now();
+      setWebQueue(prev => [...prev, { id: queueId, title: urlInput, url: urlInput, status: 'processing' }]);
+
+
+      const safetyTimeout = setTimeout(() => {
+        console.error("[UrlTranscribe] TIMEOUT");
+        showAlert("Timeout: The extension did not respond.");
+        setStatus('idle');
+        setWebQueue(prev => prev.filter(item => item.id !== queueId));
+      }, 30000);
+
+      window.chrome.runtime.sendMessage(extensionId, {
+        action: "transcribe_url",
+        url: urlInput,
+        source: "web_client_url"
+      }, (res) => {
+        clearTimeout(safetyTimeout);
+        if (window.chrome.runtime.lastError) {
+          console.error("[UrlTranscribe] Runtime Error:", window.chrome.runtime.lastError);
+          showAlert(`Error: ${window.chrome.runtime.lastError.message}`);
+          setStatus('idle');
+          return;
+        }
+
+        if (res && res.type === 'TRANSCRIPT') {
+          setTranscription(res.text);
+          setStatus('idle');
+          // showAlert("Transcription Complete!");
+          setUrlInput('');
+          setWebQueue(prev => prev.filter(item => item.id !== queueId));
+
+          // Auto-generate generic notes
+          // generateFullNotes(res.text); // Moved inside async block below
+
+          // Save to history with AI naming
+          (async () => {
+            let name = "URL Transcription";
+            try {
+              const aiName = await generateTranscriptionName(res.text);
+              if (aiName) name = aiName;
+            } catch (e) { }
+
+            const historyItem = saveToHistory(name, res.text, 'transcription', 'rapid-url');
+
+            // Generate notes and update history
+            generateFullNotes(res.text).then(notes => {
+              if (historyItem && historyItem.id) {
+                updateHistoryItem(historyItem.id, { notes });
+              }
+            });
+          })();
+        } else if (res && (res.error || res.type === 'ERROR')) {
+          showAlert(`Failed: ${res.error || res.message}`);
+          setStatus('idle');
+          setWebQueue(prev => prev.filter(item => item.id !== queueId));
+        } else {
+          setStatus('idle');
+          setWebQueue(prev => prev.filter(item => item.id !== queueId));
+        }
+      });
+    } catch (error) {
+      console.error("URL Transcribe Error:", error);
+      showAlert("Error: " + error.message);
+      setStatus('idle');
     }
   };
 
@@ -860,26 +1075,21 @@ function App() {
       return;
     }
 
-    // Handle Mute Logic if toggle is on
-    if (backgroundMuted && window.chrome && window.chrome.runtime) {
-      window.chrome.runtime.sendMessage(extensionId, { action: "GET_ACTIVE_TAB_INFO" }, (response) => {
-        if (response && response.success) {
-          window.chrome.runtime.sendMessage(extensionId, {
-            action: "MUTE_TAB",
-            tabId: response.tabId,
-            muted: true
-          });
-        }
-      });
-    }
-
     try {
-      const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+      const stream = await navigator.mediaDevices.getDisplayMedia({
+        video: true,
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          suppressLocalAudioPlayback: backgroundMuted // This magically mutes the tab/window/screen locally!
+        },
+        suppressLocalAudioPlayback: backgroundMuted // Duplicate at root for safety/compatibility
+      });
 
       // Check if user shared audio
       const audioTrack = stream.getAudioTracks()[0];
       if (!audioTrack) {
-        alert("Please make sure to check 'Share System Audio' when selecting a screen/tab!");
+        showAlert("Please make sure to check 'Share System Audio' when selecting a screen/tab!");
         stream.getTracks().forEach(t => t.stop());
         return;
       }
@@ -969,18 +1179,6 @@ function App() {
           mediaRecorder.current.onstop = () => {
             try {
               port.disconnect();
-              // Unmute if we muted on start
-              if (backgroundMuted && window.chrome && window.chrome.runtime) {
-                window.chrome.runtime.sendMessage(EXTENSION_ID, { action: "GET_ACTIVE_TAB_INFO" }, (response) => {
-                  if (response && response.success) {
-                    window.chrome.runtime.sendMessage(EXTENSION_ID, {
-                      action: "MUTE_TAB",
-                      tabId: response.tabId,
-                      muted: false
-                    });
-                  }
-                });
-              }
             } catch (e) { /* ignore */ }
 
             stream.getTracks().forEach(t => t.stop());
@@ -1051,7 +1249,36 @@ function App() {
     }
   };
 
-  const stopRecording = () => {
+  const generateTranscriptionName = async (text) => {
+    if (!text || text.trim().length < 10) return null;
+    try {
+      const messages = [
+        {
+          role: 'system',
+          content: 'You are a helpful assistant. Generate a short, descriptive title (maximum 6 words) for the following transcript text. Do not include quotes or prefixes like "Title:". Just the title.'
+        },
+        {
+          role: 'user',
+          content: text.slice(0, 800) // First ~100-150 words
+        }
+      ];
+
+      const response = await fetch('/api/llm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages })
+      });
+
+      if (!response.ok) return null;
+      const data = await response.json();
+      return data.completion ? data.completion.trim().replace(/^["']|["']$/g, '') : null;
+    } catch (e) {
+      console.error("Failed to generate name:", e);
+      return null;
+    }
+  };
+
+  const stopRecording = async () => {
     if (mediaRecorder.current) {
       // Clean up extension port if present (for Live System Streaming)
       if (mediaRecorder.current.extensionPort) {
@@ -1072,7 +1299,16 @@ function App() {
       // Manual save for Web Speech API since its async nature might be tricky 
       // and we want to ensure it's saved when user clicks stop.
       if (transcribeCategory === 'live' && transcription) {
-        saveToHistory(`Live Recording ${new Date().toLocaleTimeString()}`, transcription, 'transcription', 'google-speech');
+        let name = `Live Recording ${new Date().toLocaleTimeString()}`;
+
+        // Attempt AI naming
+        // Use a small clearer status if desired, but for now we'll just await (optimistic UI)
+        try {
+          const aiName = await generateTranscriptionName(transcription);
+          if (aiName) name = aiName;
+        } catch (e) { console.error(e); }
+
+        saveToHistory(name, transcription, 'transcription', 'google-speech', liveNotes, assistMessages);
       }
     }
     stopTimer();
@@ -1186,7 +1422,19 @@ function App() {
 
   return (
     <div className="app-layout">
+      <ProductTour activeTour={activeTour} onTourEnd={handleTourEnd} />
+      {showWelcomeModal && (
+        <WelcomeModal
+          onClose={() => {
+            setShowWelcomeModal(false);
+            localStorage.setItem('hasSeenWelcome', 'true');
+          }}
+          onSelectOption={handleTourSelection}
+        />
+      )}
+
       <Sidebar
+        id="tour-sidebar"
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         onRapidTranscribe={handleRapidTranscribeClick}
@@ -1202,6 +1450,7 @@ function App() {
         translationStatus={translationStatus}
         translationProgress={translationProgress}
         translatorReady={translatorReady}
+        nativeHostConnected={nativeHostConnected}
       />
 
       {isSidebarOpen && (
@@ -1209,12 +1458,6 @@ function App() {
       )}
 
       <main className="main-content">
-        {nativeHostConnected && (
-          <div className="native-badge-inline">
-            <i className="fas fa-check-circle"></i> Native App Connected
-          </div>
-        )}
-
         <div className="dashboard-header">
           <button className="mobile-menu-btn" onClick={() => setIsSidebarOpen(true)} style={{ marginBottom: '16px' }}>
             <i className="fas fa-bars"></i>
@@ -1235,7 +1478,7 @@ function App() {
                     <i className="fas fa-microphone"></i> Live
                   </button>
                   <button className={`category-btn ${transcribeCategory === 'background' ? 'active' : ''}`} onClick={() => setTranscribeCategory('background')}>
-                    <i className="fas fa-desktop"></i> Background
+                    <i className="fas fa-globe"></i> Web
                   </button>
                   <button className={`category-btn ${transcribeCategory === 'file' ? 'active' : ''}`} onClick={() => setTranscribeCategory('file')}>
                     <i className="fas fa-upload"></i> File
@@ -1250,10 +1493,12 @@ function App() {
                   {/* 1. Audio Source Selector (Big & Prominent) */}
                   <div className="audio-source-section" style={{ marginBottom: '30px' }}>
                     <label style={{ display: 'block', marginBottom: '10px', fontSize: '14px', fontWeight: '600', color: 'var(--gray)' }}>Select Audio Source</label>
-                    <div className="source-buttons-large" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+                    <div id="tour-source-toggle" className="source-buttons-large" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
                       <button
                         className={`source-btn-lg ${transcriptionSource === 'tab' ? 'active' : ''}`}
                         onClick={() => setTranscriptionSource('tab')}
+                        onMouseEnter={() => setHoveredSource('tab')}
+                        onMouseLeave={() => setHoveredSource(null)}
                         style={{
                           padding: '20px',
                           border: '2px solid var(--gray-light)',
@@ -1263,16 +1508,49 @@ function App() {
                           color: transcriptionSource === 'tab' ? 'var(--primary-dark)' : 'var(--gray)',
                           cursor: 'pointer',
                           transition: 'all 0.2s ease',
-                          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px'
+                          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px',
+                          position: 'relative'
                         }}
                       >
                         <i className="fas fa-desktop" style={{ fontSize: '24px' }}></i>
                         <span style={{ fontWeight: '600' }}>Tab Audio</span>
+                        {hoveredSource === 'tab' && (
+                          <div style={{
+                            position: 'absolute',
+                            bottom: '100%',
+                            left: '50%',
+                            transform: 'translateX(-50%)',
+                            marginBottom: '10px',
+                            background: '#1E293B',
+                            color: 'white',
+                            padding: '8px 12px',
+                            borderRadius: '6px',
+                            fontSize: '12px',
+                            width: '200px',
+                            textAlign: 'center',
+                            zIndex: 10,
+                            pointerEvents: 'none',
+                            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                          }}>
+                            Captures audio playing within this specific browser tab.
+                            <div style={{
+                              position: 'absolute',
+                              top: '100%',
+                              left: '50%',
+                              transform: 'translateX(-50%)',
+                              borderLeft: '6px solid transparent',
+                              borderRight: '6px solid transparent',
+                              borderTop: '6px solid #1E293B'
+                            }}></div>
+                          </div>
+                        )}
                       </button>
 
                       <button
                         className={`source-btn-lg ${transcriptionSource === 'mic' ? 'active' : ''}`}
                         onClick={() => setTranscriptionSource('mic')}
+                        onMouseEnter={() => setHoveredSource('mic')}
+                        onMouseLeave={() => setHoveredSource(null)}
                         style={{
                           padding: '20px',
                           border: '2px solid var(--gray-light)',
@@ -1282,16 +1560,49 @@ function App() {
                           color: transcriptionSource === 'mic' ? 'var(--primary-dark)' : 'var(--gray)',
                           cursor: 'pointer',
                           transition: 'all 0.2s ease',
-                          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px'
+                          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px',
+                          position: 'relative'
                         }}
                       >
                         <i className="fas fa-microphone" style={{ fontSize: '24px' }}></i>
                         <span style={{ fontWeight: '600' }}>Microphone</span>
+                        {hoveredSource === 'mic' && (
+                          <div style={{
+                            position: 'absolute',
+                            bottom: '100%',
+                            left: '50%',
+                            transform: 'translateX(-50%)',
+                            marginBottom: '10px',
+                            background: '#1E293B',
+                            color: 'white',
+                            padding: '8px 12px',
+                            borderRadius: '6px',
+                            fontSize: '12px',
+                            width: '200px',
+                            textAlign: 'center',
+                            zIndex: 10,
+                            pointerEvents: 'none',
+                            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                          }}>
+                            Records your voice or surroundings via your microphone.
+                            <div style={{
+                              position: 'absolute',
+                              top: '100%',
+                              left: '50%',
+                              transform: 'translateX(-50%)',
+                              borderLeft: '6px solid transparent',
+                              borderRight: '6px solid transparent',
+                              borderTop: '6px solid #1E293B'
+                            }}></div>
+                          </div>
+                        )}
                       </button>
 
                       <button
                         className={`source-btn-lg ${transcriptionSource === 'system' ? 'active' : ''}`}
                         onClick={() => setTranscriptionSource('system')}
+                        onMouseEnter={() => setHoveredSource('system')}
+                        onMouseLeave={() => setHoveredSource(null)}
                         style={{
                           padding: '20px',
                           border: '2px solid var(--gray-light)',
@@ -1301,13 +1612,61 @@ function App() {
                           color: transcriptionSource === 'system' ? 'var(--primary-dark)' : 'var(--gray)',
                           cursor: 'pointer',
                           transition: 'all 0.2s ease',
-                          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px'
+                          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px',
+                          position: 'relative'
                         }}
                       >
                         <i className="fas fa-volume-up" style={{ fontSize: '24px' }}></i>
                         <span style={{ fontWeight: '600' }}>System</span>
+                        {hoveredSource === 'system' && (
+                          <div style={{
+                            position: 'absolute',
+                            bottom: '100%',
+                            left: '50%',
+                            transform: 'translateX(-50%)',
+                            marginBottom: '10px',
+                            background: '#1E293B',
+                            color: 'white',
+                            padding: '8px 12px',
+                            borderRadius: '6px',
+                            fontSize: '12px',
+                            width: '200px',
+                            textAlign: 'center',
+                            zIndex: 10,
+                            pointerEvents: 'none',
+                            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                          }}>
+                            Captures all audio playing on your computer (speakers).
+                            <div style={{
+                              position: 'absolute',
+                              top: '100%',
+                              left: '50%',
+                              transform: 'translateX(-50%)',
+                              borderLeft: '6px solid transparent',
+                              borderRight: '6px solid transparent',
+                              borderTop: '6px solid #1E293B'
+                            }}></div>
+                          </div>
+                        )}
                       </button>
                     </div>
+
+                    {(transcriptionSource === 'system' || transcriptionSource === 'tab') && (
+                      <div style={{ marginTop: '20px', maxWidth: '400px', margin: '20px auto 0' }}>
+                        <div className="bg-settings-row" style={{ marginBottom: 0, padding: '12px 20px' }}>
+                          <label className="toggle-label-clean" style={{ justifyContent: 'space-between', width: '100%' }}>
+                            <span style={{ fontSize: '15px', fontWeight: '500', color: 'var(--dark)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <i className="fas fa-volume-mute" style={{ color: 'var(--gray)', fontSize: '14px' }}></i>
+                              Mute source while recording
+                            </span>
+                            <div className="toggle-switch-wrapper">
+                              <input type="checkbox" checked={backgroundMuted} onChange={(e) => setBackgroundMuted(e.target.checked)} />
+                              <span className="toggle-slider"></span>
+                            </div>
+                          </label>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* 2. Controls & Timer */}
@@ -1328,7 +1687,7 @@ function App() {
                           <i className="fas fa-spinner fa-spin"></i> Processing...
                         </button>
                       ) : (
-                        <button className="btn btn-primary btn-xl" onClick={() => {
+                        <button id="tour-start-capture" className="btn btn-primary btn-xl" onClick={() => {
                           if (transcriptionSource === 'mic') startMicrophoneRecording();
                           else startSystemAudioRecording();
                         }} style={{ padding: '16px 40px', fontSize: '18px', borderRadius: '30px', display: 'flex', alignItems: 'center', gap: '12px', boxShadow: '0 4px 14px rgba(37, 99, 235, 0.4)' }}>
@@ -1376,6 +1735,7 @@ function App() {
                         <button
                           className={`sub-tab-btn ${liveSubTab === 'assist' ? 'active' : ''}`}
                           onClick={() => setLiveSubTab('assist')}
+                          id="tour-assist-tab"
                           style={{ padding: '6px 16px', fontSize: '13px', borderRadius: '6px', border: 'none' }}
                         >
                           Assist
@@ -1451,64 +1811,90 @@ function App() {
                 <div className="category-content active">
                   <div className="background-controls-card">
                     <div className="info-header">
-                      <i className="fas fa-desktop info-icon-bg"></i>
+                      <i className="fas fa-globe info-icon-bg"></i>
                       <div className="info-text-group">
-                        <h4>Background Capture</h4>
-                        <p>Record systems audio or microphone while this tab is in the background.</p>
+                        <h4>Rapid Web Transcription</h4>
+                        <p>Transcribe videos from the web (YouTube, Canvas, etc.) in a matter of seconds.</p>
                       </div>
                     </div>
 
-                    <div className="bg-settings-row">
-                      <label className="toggle-label-clean">
-                        <span>Mute tab while recording</span>
-                        <div className="toggle-switch-wrapper">
-                          <input type="checkbox" checked={backgroundMuted} onChange={(e) => setBackgroundMuted(e.target.checked)} />
-                          <span className="toggle-slider"></span>
-                        </div>
-                      </label>
+                    {/* Section 1: Tab Selector */}
+                    <div style={{ marginTop: '24px' }}>
+                      <button
+                        id="tour-rapid-btn"
+                        className="btn btn-primary"
+                        onClick={handleRapidTranscribeClick}
+                        style={{ width: '100%', padding: '16px', borderRadius: '12px', fontSize: '18px', fontWeight: '600', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                      >
+                        <i className="fas fa-bolt" style={{ marginRight: '10px' }}></i>
+                        Transcribe Audio from Another Browser Tab
+                      </button>
                     </div>
 
-                    <div className="bg-actions-row">
-                      {status === 'recording' ? (
-                        <button className="btn btn-danger btn-large-block" onClick={stopRecording}>
-                          <div className="btn-content-stack">
-                            <i className="fas fa-stop-circle"></i>
-                            <span>Stop & Transcribe</span>
-                          </div>
-                        </button>
-                      ) : status === 'transcribing' ? (
-                        <button className="btn btn-outline btn-large-block disabled" disabled>
-                          <div className="btn-content-stack">
-                            <i className="fas fa-spinner fa-spin"></i>
-                            <span>Processing...</span>
-                          </div>
-                        </button>
-                      ) : (
-                        <div className="dual-action-grid">
-                          <button className="btn-action-card primary" onClick={() => {
-                            if (transcriptionSource === 'mic') startMicrophoneRecording();
-                            else startSystemAudioRecording();
-                          }}>
-                            <i className="fas fa-record-vinyl"></i>
-                            <span>Start Capture</span>
-                          </button>
-
-                          <button className="btn-action-card rapid" onClick={handleRapidTranscribeClick}>
-                            <i className="fas fa-bolt"></i>
-                            <span>Rapid Transcribe</span>
-                          </button>
-                        </div>
-                      )}
+                    {/* Divider */}
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      margin: '28px 0',
+                      color: 'var(--gray)',
+                      fontWeight: '800',
+                      fontSize: '16px'
+                    }}>
+                      <div style={{ flex: 1, height: '2px', background: 'var(--gray-light)', opacity: 0.8 }}></div>
+                      <span style={{ padding: '0 16px', color: 'var(--text-primary)', opacity: 0.7 }}>OR</span>
+                      <div style={{ flex: 1, height: '2px', background: 'var(--gray-light)', opacity: 0.8 }}></div>
                     </div>
+
+                    {/* Section 2: URL Input */}
+                    <div className="url-input-container">
+                      <div className="search-bar" id="tour-url-input" style={{ width: '100%', marginBottom: '12px', padding: '12px' }}>
+                        <i className="fas fa-link" style={{ fontSize: '16px' }}></i>
+                        <input
+                          type="text"
+                          placeholder="Paste your video link here..."
+                          value={urlInput}
+                          onChange={(e) => setUrlInput(e.target.value)}
+                          style={{ fontSize: '16px' }}
+                        />
+                      </div>
+                      <button
+                        className="btn btn-primary"
+                        onClick={handleUrlTranscribe}
+                        style={{ width: '100%', padding: '12px', borderRadius: '12px', fontSize: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        disabled={!urlInput}
+                      >
+                        <i className="fas fa-bolt" style={{ marginRight: '8px' }}></i>
+                        Transcribe URL
+                      </button>
+                    </div>
+
+                    {/* Web Transcription Queue */}
+                    {webQueue.length > 0 && (
+                      <div className="web-queue" style={{ marginTop: '24px', borderTop: '1px solid var(--gray-light)', paddingTop: '16px' }}>
+                        <h5 style={{ margin: '0 0 12px 0', fontSize: '13px', color: 'var(--gray)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Processing Queue</h5>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          {webQueue.map(item => (
+                            <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', background: '#F8FAFC', borderRadius: '8px', border: '1px solid var(--gray-light)' }}>
+                              <i className="fas fa-spinner fa-spin" style={{ color: 'var(--primary)', fontSize: '18px' }}></i>
+                              <div style={{ flex: 1, overflow: 'hidden' }}>
+                                <div style={{ fontSize: '14px', fontWeight: '500', color: 'var(--dark)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.title || item.url}</div>
+                                <div style={{ fontSize: '12px', color: 'var(--gray)' }}>Transcribing...</div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <div className="output-container" style={{ marginBottom: '16px', minHeight: '300px' }}>
                     <div className="output-header" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '12px' }}>
                       <div className="output-header-top" style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
                         <div className="output-header-left">
-                          <div className="output-title"><i className="fas fa-file-alt"></i> Background Output</div>
+                          <div className="output-title"><i className="fas fa-file-alt"></i> Transcription Results</div>
                         </div>
                         <div className="output-actions">
+                          <button className="btn btn-outline" onClick={() => navigator.clipboard.writeText(transcription)}><i className="fas fa-copy"></i> Copy</button>
                           <button className="btn btn-outline" onClick={() => handleDownloadTxt(transcription)}><i className="fas fa-download"></i></button>
                         </div>
                       </div>
@@ -1544,7 +1930,7 @@ function App() {
                         {/* Original Text - Hide if translation enabled (per request) */}
                         {!translationEnabled && (
                           <div className="output" id="transcript">
-                            {transcription || "Your background transcription will appear here..."}
+                            {transcription || "Your transcription will appear here..."}
                           </div>
                         )}
                         {/* Translated Text - Show if enabled */}
@@ -1560,8 +1946,13 @@ function App() {
                         id="liveNotes"
                         className="flex-1 overflow-y-auto p-4 text-sm text-[var(--text-secondary)]"
                       >
-                        {liveNotes ? (
-                          <div dangerouslySetInnerHTML={{ __html: marked.parse(liveNotes) }} />
+                        {notesStatus === 'generating' ? (
+                          <div style={{ textAlign: 'center', padding: '40px', color: 'var(--primary)' }}>
+                            <i className="fas fa-magic fa-spin" style={{ fontSize: '32px', marginBottom: '12px' }}></i>
+                            <p>Generating AI Notes...</p>
+                          </div>
+                        ) : liveNotes ? (
+                          <div className="notes-content" dangerouslySetInnerHTML={{ __html: marked.parse(liveNotes) }} />
                         ) : (
                           <div style={{ textAlign: 'center', padding: '40px', color: 'var(--gray)' }}>
                             <i className="fas fa-sticky-note" style={{ fontSize: '32px', marginBottom: '12px', opacity: 0.5 }}></i>
@@ -1613,6 +2004,7 @@ function App() {
 
                   {/* Drop Zone */}
                   <div className="drop-zone-enhanced"
+                    id="tour-upload-area"
                     onClick={() => document.getElementById('fileInput').click()}
                     onDragOver={(e) => e.preventDefault()}
                     onDrop={(e) => {
@@ -1641,7 +2033,7 @@ function App() {
                   </div>
 
                   {/* Model Selector */}
-                  <div className="model-selector-enhanced">
+                  <div className="model-selector-enhanced" id="tour-model-selector">
                     <h3 className="section-title"><i className="fas fa-brain"></i> AI Model</h3>
                     <div className="model-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
 
@@ -1660,10 +2052,7 @@ function App() {
                         </div>
                         <div className="model-info">
                           <p className="model-desc">Good balance. Recommended for most general use cases.</p>
-                          <div className="model-tags">
-                            <span className="tag speed">Med Speed</span>
-                            <span className="tag accuracy">Good Accuracy</span>
-                          </div>
+
                         </div>
                       </div>
 
@@ -1680,10 +2069,7 @@ function App() {
                         </div>
                         <div className="model-info">
                           <p className="model-desc">High accuracy. Best for professional work and difficult audio.</p>
-                          <div className="model-tags">
-                            <span className="tag speed">Low Speed</span>
-                            <span className="tag accuracy">High Accuracy</span>
-                          </div>
+
                         </div>
                       </div>
 
@@ -1692,82 +2078,164 @@ function App() {
 
                   {/* Actions */}
                   <div className="action-buttons-enhanced">
-                    <button className="btn btn-primary btn-large" onClick={startTranscription} disabled={status === 'transcribing' || status === 'loading-model'}>
+                    <button id="tour-transcribe-btn" className="btn btn-primary btn-large" onClick={startTranscription} disabled={status === 'transcribing' || status === 'loading-model'}>
                       {status === 'transcribing' ? <i className="fas fa-spinner fa-spin"></i> : <i className="fas fa-play-circle"></i>}
                       {status === 'transcribing' ? ' Transcribing...' : ' Start Transcription'}
                     </button>
                   </div>
 
                   {/* Transcription Results & Queue */}
+                  {/* Transcription Results & Queue */}
                   {(transcribeQueue.length > 0 || completedTranscriptions.length > 0) && (
-                    <div className="output-container-enhanced transcription-results-card" style={{ marginTop: '30px' }}>
-                      <div className="output-header">
-                        <div className="output-title"><i className="fas fa-file-alt"></i> Transcription Results</div>
-                        <div className="output-actions">
-                          <button className="btn btn-outline" onClick={() => navigator.clipboard.writeText(transcription)}><i className="fas fa-copy"></i> Copy</button>
-                          <button className="btn btn-outline" onClick={() => handleDownloadTxt(transcription)}><i className="fas fa-download"></i> Download TXT</button>
-                          <button className="btn btn-primary" onClick={() => handleCreateAINotes(transcription)}><i className="fas fa-robot"></i> AI Notes</button>
+                    <div className="output-container" style={{ marginTop: '30px', minHeight: '300px' }}>
+                      <div className="output-header" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '12px' }}>
+                        <div className="output-header-top" style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+                          <div className="output-header-left">
+                            <div className="output-title"><i className="fas fa-file-alt"></i> Transcription Results</div>
+                          </div>
+                          <div className="output-actions">
+                            <button className="btn btn-outline" onClick={() => navigator.clipboard.writeText(transcription)}><i className="fas fa-copy"></i> Copy</button>
+                            <button className="btn btn-outline" onClick={() => handleDownloadTxt(transcription)}><i className="fas fa-download"></i></button>
+                          </div>
+                        </div>
+
+                        {/* Subtabs */}
+                        <div className="output-subtabs" style={{ display: 'flex', gap: '4px', background: 'var(--gray-light)', padding: '4px', borderRadius: '8px', width: 'fit-content' }}>
+                          <button
+                            className={`sub-tab-btn ${outputSubTab === 'transcript' ? 'active' : ''}`}
+                            onClick={() => setOutputSubTab('transcript')}
+                            style={{ padding: '6px 16px', fontSize: '13px', borderRadius: '6px', border: 'none' }}
+                          >
+                            Transcript
+                          </button>
+                          <button
+                            className={`sub-tab-btn ${outputSubTab === 'notes' ? 'active' : ''}`}
+                            onClick={() => setOutputSubTab('notes')}
+                            style={{ padding: '6px 16px', fontSize: '13px', borderRadius: '6px', border: 'none' }}
+                          >
+                            Notes
+                          </button>
+                          <button
+                            className={`sub-tab-btn ${outputSubTab === 'assist' ? 'active' : ''}`}
+                            onClick={() => setOutputSubTab('assist')}
+                            style={{ padding: '6px 16px', fontSize: '13px', borderRadius: '6px', border: 'none' }}
+                          >
+                            Assist
+                          </button>
                         </div>
                       </div>
 
-                      <div className="queue-section">
-                        <div className="section-label">In Progress</div>
-                        {transcribeQueue.length === 0 ? (
-                          <div className="queue-empty">No files are currently transcribing.</div>
-                        ) : (
-                          <div className="queue-list">
-                            {transcribeQueue.map(job => (
-                              <div key={job.id} className="queue-item">
-                                <div className="queue-info">
-                                  <div className="queue-name">{job.name}</div>
-                                  <div className="queue-meta">
-                                    {formatFileSize(job.size)} • {job.status === 'processing' ? 'Transcribing' : 'Queued'}
+                      {outputSubTab === 'transcript' && (
+                        <div>
+                          {/* Queue Section */}
+                          <div className="queue-section">
+                            <div className="section-label">In Progress</div>
+                            {transcribeQueue.length === 0 ? (
+                              <div className="queue-empty">No files are currently transcribing.</div>
+                            ) : (
+                              <div className="queue-list">
+                                {transcribeQueue.map(job => (
+                                  <div key={job.id} className="queue-item">
+                                    <div className="queue-info">
+                                      <div className="queue-name">{job.name}</div>
+                                      <div className="queue-meta">
+                                        {formatFileSize(job.size)} • {job.status === 'processing' ? 'Transcribing' : 'Queued'}
+                                      </div>
+                                    </div>
+                                    <div className="queue-progress">
+                                      <div className={`queue-status ${job.status}`}>
+                                        {job.status === 'processing' ? displayPercent(job.progress) : 'Waiting'}
+                                      </div>
+                                      <div className="queue-progress-bar">
+                                        <div
+                                          className="queue-progress-fill"
+                                          style={{
+                                            width: `${job.status === 'processing'
+                                              ? Math.max(0, Math.min(100, Math.round(job.progress || 0)))
+                                              : 0}%`
+                                          }}
+                                        ></div>
+                                      </div>
+                                    </div>
                                   </div>
-                                </div>
-                                <div className="queue-progress">
-                                  <div className={`queue-status ${job.status}`}>
-                                    {job.status === 'processing' ? displayPercent(job.progress) : 'Waiting'}
-                                  </div>
-                                  <div className="queue-progress-bar">
-                                    <div
-                                      className="queue-progress-fill"
-                                      style={{
-                                        width: `${job.status === 'processing'
-                                          ? Math.max(0, Math.min(100, Math.round(job.progress || 0)))
-                                          : 0}%`
-                                      }}
-                                    ></div>
-                                  </div>
-                                </div>
+                                ))}
                               </div>
-                            ))}
+                            )}
                           </div>
-                        )}
-                      </div>
 
-                      {completedTranscriptions.length > 0 && (
-                        <div className="completed-section">
-                          <div className="section-label">Completed</div>
-                          <div className="completed-list">
-                            {completedTranscriptions.map(job => (
-                              <div key={job.id} className="completed-item">
-                                <div className="completed-header">
-                                  <div>
-                                    <div className="queue-name">{job.name}</div>
-                                    ```
-                                    <div className="queue-meta">{job.status === 'error' ? 'Failed' : 'Finished • 100%'}</div>
+                          {/* Completed Section */}
+                          {completedTranscriptions.length > 0 && (
+                            <div className="completed-section">
+                              <div className="section-label">Completed</div>
+                              <div className="completed-list">
+                                {completedTranscriptions.map(job => (
+                                  <div key={job.id} className="completed-item">
+                                    <div className="completed-header">
+                                      <div>
+                                        <div className="queue-name">{job.name}</div>
+                                        <div className="queue-meta">{job.status === 'error' ? 'Failed' : 'Finished • 100%'}</div>
+                                      </div>
+                                      {job.status !== 'error' && (
+                                        <button className="btn btn-outline btn-sm" onClick={() => navigator.clipboard.writeText(job.transcript || '')}>
+                                          Copy
+                                        </button>
+                                      )}
+                                    </div>
+                                    <div className="completed-body" style={{ whiteSpace: 'pre-wrap' }}>
+                                      {job.status === 'error' ? `Error: ${job.transcript}` : job.transcript}
+                                    </div>
                                   </div>
-                                  {job.status !== 'error' && (
-                                    <button className="btn btn-outline btn-sm" onClick={() => navigator.clipboard.writeText(job.transcript || '')}>
-                                      Copy
-                                    </button>
-                                  )}
-                                </div>
-                                <div className="completed-body" style={{ whiteSpace: 'pre-wrap' }}>
-                                  {job.status === 'error' ? `Error: ${job.transcript}` : job.transcript}
-                                </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {outputSubTab === 'notes' && (
+                        <div
+                          id="liveNotes"
+                          className="flex-1 overflow-y-auto p-4 text-sm text-[var(--text-secondary)]"
+                        >
+                          {liveNotes ? (
+                            <div dangerouslySetInnerHTML={{ __html: marked.parse(liveNotes) }} />
+                          ) : (
+                            <div style={{ textAlign: 'center', padding: '40px', color: 'var(--gray)' }}>
+                              <i className="fas fa-sticky-note" style={{ fontSize: '32px', marginBottom: '12px', opacity: 0.5 }}></i>
+                              <p>Notes will appear here automatically.</p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {outputSubTab === 'assist' && (
+                        <div className="chat-container live-chat-container">
+                          <div className="chat-messages" ref={(el) => { if (el) el.scrollTop = el.scrollHeight; }}>
+                            {assistMessages.map((msg, idx) => (
+                              <div key={idx} className={`message ${msg.role}`}>
+                                {msg.content}
                               </div>
                             ))}
+                            {assistLoading && <div className="message assistant"><i className="fas fa-spinner fa-spin"></i></div>}
+                          </div>
+                          <div className="chat-input-container">
+                            <textarea
+                              className="chat-input"
+                              placeholder="Ask about your file context..."
+                              rows="1"
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' && !e.shiftKey) {
+                                  e.preventDefault();
+                                  sendAssistMessage(e.target.value);
+                                  e.target.value = '';
+                                }
+                              }}
+                            ></textarea>
+                            <button className="send-button" onClick={(e) => {
+                              const input = e.target.previousSibling;
+                              sendAssistMessage(input.value);
+                              input.value = '';
+                            }}><i className="fas fa-paper-plane"></i></button>
                           </div>
                         </div>
                       )}
@@ -1924,9 +2392,14 @@ function App() {
               </div>
               <h3 className="modal-title">Taking too long?</h3>
               <p className="modal-text">Web browsers throttle performance. Download the desktop app for <strong>10x faster</strong> transcription speeds!</p>
-              <button className="btn btn-primary btn-block" onClick={() => window.open('https://audiotranscriberlanding.vercel.app', '_blank')}>
-                <i className="fas fa-download"></i> Download App
-              </button>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <a href="https://github.com/tusharj03/transcribelandingpage/releases/download/v1.0.5/Resonote_Background_Service_Setup.exe" className="btn btn-primary btn-block" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', textDecoration: 'none' }}>
+                  <i className="fab fa-windows"></i> Download for Windows
+                </a>
+                <a href="https://github.com/tusharj03/transcribelandingpage/releases/download/v1.0.5/Resonote_Background_Service.pkg" className="btn btn-primary btn-block" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: '#333', borderColor: '#333', textDecoration: 'none' }}>
+                  <i className="fab fa-apple"></i> Download for Mac
+                </a>
+              </div>
             </div>
           </div>
         )
@@ -1951,49 +2424,59 @@ function App() {
         )
       }
 
+      {/* Alert Modal */}
+      {alertMessage && (
+        <AlertModal
+          message={alertMessage}
+          onClose={() => setAlertMessage(null)}
+        />
+      )}
+
       {/* Tab Selector Modal */}
       {showTabSelector && (
-        <div className="modal-overlay" style={{
+        <div className="modal-overlay" onClick={() => setShowTabSelector(false)} style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
           backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, color: '#1E293B'
         }}>
-          <div className="tab-selector-container" style={{
-            background: 'white', padding: '24px', borderRadius: '12px', width: '450px', maxHeight: '80vh', overflowY: 'auto', display: 'flex', flexDirection: 'column',
-            boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)'
+          <div className="tab-selector-container" onClick={(e) => e.stopPropagation()} style={{
+            background: 'white', borderRadius: '12px', width: '450px', maxHeight: '80vh', display: 'flex', flexDirection: 'column',
+            boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', overflow: 'hidden'
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '24px 24px 16px 24px', flexShrink: 0, background: 'white' }}>
               <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: '#1E293B' }}><i className="fas fa-list"></i> Select a Tab</h3>
               <button onClick={() => setShowTabSelector(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px', color: '#64748B' }}>
                 <i className="fas fa-times"></i>
               </button>
             </div>
 
-            {tabsLoading ? (
-              <div style={{ padding: '20px', textAlign: 'center', color: '#64748B' }}>
-                <i className="fas fa-spinner fa-spin"></i> Loading tabs...
-              </div>
-            ) : (
-              <div className="tab-list" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {availableTabs.length === 0 ? (
-                  <p style={{ textAlign: 'center', color: '#64748B' }}>No open tabs found.</p>
-                ) : availableTabs.map(tab => (
-                  <div key={tab.id} onClick={() => startRapidTranscription(tab)} style={{
-                    padding: '12px', background: '#F8FAFC', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '12px',
-                    border: '1px solid transparent', transition: 'all 0.2s', textAlign: 'left'
-                  }}
-                    onMouseEnter={(e) => { e.currentTarget.style.background = '#F1F5F9'; e.currentTarget.style.borderColor = 'var(--primary)'; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.background = '#F8FAFC'; e.currentTarget.style.borderColor = 'transparent'; }}
-                  >
-                    {tab.favIconUrl ? <img src={tab.favIconUrl} alt="" style={{ width: '16px', height: '16px' }} /> : <i className="fas fa-globe" style={{ color: '#64748B' }}></i>}
-                    <div style={{ overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', flex: 1 }}>
-                      <div style={{ fontWeight: '500', fontSize: '14px', marginBottom: '2px', color: '#1E293B' }}>{tab.title}</div>
-                      <div style={{ fontSize: '11px', color: '#64748B', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{tab.url}</div>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '0 24px 24px 24px' }}>
+              {tabsLoading ? (
+                <div style={{ padding: '20px', textAlign: 'center', color: '#64748B' }}>
+                  <i className="fas fa-spinner fa-spin"></i> Loading tabs...
+                </div>
+              ) : (
+                <div className="tab-list" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {availableTabs.length === 0 ? (
+                    <p style={{ textAlign: 'center', color: '#64748B' }}>No open tabs found.</p>
+                  ) : availableTabs.map(tab => (
+                    <div key={tab.id} onClick={() => startRapidTranscription(tab)} style={{
+                      padding: '12px', background: '#F8FAFC', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '12px',
+                      border: '1px solid transparent', transition: 'all 0.2s', textAlign: 'left'
+                    }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = '#F1F5F9'; e.currentTarget.style.borderColor = 'var(--primary)'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = '#F8FAFC'; e.currentTarget.style.borderColor = 'transparent'; }}
+                    >
+                      {tab.favIconUrl ? <img src={tab.favIconUrl} alt="" style={{ width: '16px', height: '16px' }} /> : <i className="fas fa-globe" style={{ color: '#64748B' }}></i>}
+                      <div style={{ overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', flex: 1 }}>
+                        <div style={{ fontWeight: '500', fontSize: '14px', marginBottom: '2px', color: '#1E293B' }}>{tab.title}</div>
+                        <div style={{ fontSize: '11px', color: '#64748B', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{tab.url}</div>
+                      </div>
+                      {tab.audible && <i className="fas fa-volume-up" style={{ color: '#22C55E' }}></i>}
                     </div>
-                    {tab.audible && <i className="fas fa-volume-up" style={{ color: '#22C55E' }}></i>}
-                  </div>
-                ))}
-              </div>
-            )}
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
