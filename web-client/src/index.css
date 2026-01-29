@@ -1337,6 +1337,21 @@ h1 {
     gap: 8px;
 }
 
+/* Standard Output Box (Live & Rapid) */
+.output {
+    background: white;
+    border-radius: var(--border-radius);
+    padding: 24px;
+    border: 1px solid var(--gray-light);
+    min-height: 200px;
+    max-height: 600px; /* Fixed height for scroll */
+    overflow-y: auto;
+    font-family: 'Inter', sans-serif;
+    line-height: 1.6;
+    color: var(--dark);
+    scroll-behavior: smooth;
+}
+
 .output-enhanced {
     background: white;
     border-radius: var(--border-radius);

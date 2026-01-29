@@ -12,6 +12,7 @@ import ProductTour from './components/ProductTour';
 import { useAuth } from './hooks/useAuth';
 import { useLiveNotes } from './hooks/useLiveNotes';
 import { useLiveAssist } from './hooks/useLiveAssist';
+import { useAutoScroll } from './hooks/useAutoScroll';
 import { marked } from 'marked';
 import { translator } from './lib/TranslatorEngine';
 
@@ -26,128 +27,178 @@ const POSSIBLE_EXTENSION_IDS = [
   'iddimggbohccfikpkeelhaceooojfiga'  // Production ID
 ];
 
+const CANVAS_DOMAINS = ["canvas", "instructure", "kaltura", "panopto", "learning"];
+
 class NativeHostClient {
   constructor() {
-    this.mode = 'extension'; // 'extension' | 'websocket'
     this.ws = null;
     this.wsPort = 3000;
-    this.extensionId = null; // Will be set on connection
-    this.isConnected = false;
+    this.extensionId = null;
+
+    // Dual Capability Flags
+    this.isWsConnected = false;
+    this.isExtensionConnected = false;
+
+    this.port = null;
+    this.listeners = new Set();
+  }
+
+  addListener(callback) {
+    this.listeners.add(callback);
+    return () => this.listeners.delete(callback);
   }
 
   async connect() {
-    // 1. Try Chrome Extension first (iterate through possible IDs)
-    if (window.chrome && window.chrome.runtime && window.chrome.runtime.sendMessage) {
-      for (const id of POSSIBLE_EXTENSION_IDS) {
-        try {
-          const response = await new Promise((resolve) => {
-            // Timeout for extension check
-            const pid = setTimeout(() => resolve(null), 1000);
-            try {
-              window.chrome.runtime.sendMessage(id, { action: 'ping' }, (res) => {
-                clearTimeout(pid);
-                if (window.chrome.runtime.lastError) resolve(null);
-                else resolve(res);
-              });
-            } catch (e) { clearTimeout(pid); resolve(null); }
-          });
+    console.log("🕵️‍♂️ Initializing Native Client Connections...");
 
-          if (response && response.type === 'PONG') {
-            console.log(`✅ Native Host connected via Chrome Extension (${id})`);
-            this.mode = 'extension';
-            this.isConnected = true;
-            this.extensionId = id;
-            return true;
-          }
-        } catch (e) {
-          console.log(`Extension check failed for ${id}, trying next...`);
-        }
-      }
-    }
+    // Parallel connection attempts
+    const [wsResult, extResult] = await Promise.all([
+      this.connectWebSocket(),
+      this.connectExtension()
+    ]);
 
-    // 2. Fallback to WebSocket (Safari, Firefox, Standalone)
-    return this.connectWebSocket();
+    this.isWsConnected = wsResult;
+    this.isExtensionConnected = !!extResult;
+    if (extResult) this.extensionId = extResult;
+
+    console.log(`🔌 Connection Status: WS=${this.isWsConnected}, EXT=${this.isExtensionConnected}`);
+
+    // Return true if AT LEAST one method works
+    return this.isWsConnected || this.isExtensionConnected;
   }
 
-  connectWebSocket() {
+  async connectExtension() {
+    if (!window.chrome || !window.chrome.runtime || !window.chrome.runtime.sendMessage) return null;
+
+    for (const id of POSSIBLE_EXTENSION_IDS) {
+      try {
+        const res = await new Promise(resolve => {
+          const pid = setTimeout(() => resolve(null), 500); // Fast timeout
+          try {
+            window.chrome.runtime.sendMessage(id, { action: 'ping' }, (response) => {
+              clearTimeout(pid);
+              if (window.chrome.runtime.lastError) resolve(null);
+              else resolve(response);
+            });
+          } catch (e) { clearTimeout(pid); resolve(null); }
+        });
+
+        if (res && res.type === 'PONG') {
+          console.log(`✅ Extension Connected: ${id}`);
+
+          // Establish long-lived connection for control messages
+          try {
+            this.port = window.chrome.runtime.connect(id, { name: "resonote-control" });
+            this.port.onMessage.addListener((msg) => {
+              this.listeners.forEach(cb => cb(msg));
+            });
+          } catch (e) { console.error("Control Port Connect Error:", e); }
+
+          return id;
+        }
+      } catch (e) { }
+    }
+    return null;
+  }
+
+  async connectWebSocket() {
     return new Promise((resolve) => {
       try {
-        console.log("🔄 Attempting WebSocket connection to Native Host...");
         const socket = new WebSocket(`ws://localhost:${this.wsPort}`);
-        this.ws = socket;
 
         socket.onopen = () => {
-          console.log("✅ Native Host connected via WebSocket (Universal Mode)");
-          this.mode = 'websocket';
-          this.isConnected = true;
-          // Send initial ping to verify plumbing, using EXPLICIT socket to avoid race
-          this.sendMessage({ action: 'ping' }, (res) => {
-            console.log("WS Ping valid:", res);
-            resolve(true);
-          }, socket);
+          console.log("✅ WebSocket Connected");
+          this.ws = socket;
+          this.isWsConnected = true;
+          resolve(true);
         };
 
-        this.ws.onerror = (err) => {
-          console.warn("❌ WebSocket connection failed:", err);
-          this.isConnected = false;
+        socket.onerror = (err) => {
+          // console.warn("❌ WebSocket Failed");
           resolve(false);
         };
 
-        this.ws.onmessage = (event) => {
-          // Handled by request callbacks usually, but here we might need a global listener if we support push
-          // For now, simpler request-response pattern validation
-        };
+        // Safety timeout
+        setTimeout(() => {
+          if (socket.readyState !== WebSocket.OPEN) resolve(false);
+        }, 1500);
 
-      } catch (e) {
-        console.error("WS Setup error:", e);
-        resolve(false);
-      }
+      } catch (e) { resolve(false); }
     });
   }
 
-  sendMessage(message, callback, explicitSocket = null) {
-    if (this.mode === 'extension') {
-      if (window.chrome && window.chrome.runtime && this.extensionId) {
-        window.chrome.runtime.sendMessage(this.extensionId, message, callback);
-      } else {
-        callback({ type: 'ERROR', message: 'Extension API unavailable or not connected' });
-      }
-    } else if (this.mode === 'websocket') {
-      const targetWs = explicitSocket || this.ws;
-      if (targetWs && targetWs.readyState === WebSocket.OPEN) {
-        // Simple One-Off Implementation:
-        const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        message.requestId = requestId;
+  sendMessage(message, callback, target = 'auto') {
+    // Strategy: 'auto' (prefer WS), 'websocket', 'extension'
 
-        const listener = (event) => {
-          try {
-            const data = JSON.parse(event.data);
-            if (data.requestId === requestId || (data.type === 'PONG' && message.action === 'ping')) {
-              targetWs.removeEventListener('message', listener);
+    // 1. WebSocket (Preferred for 'auto' or explicit)
+    if ((target === 'auto' || target === 'websocket') && this.isWsConnected && this.ws && this.ws.readyState === WebSocket.OPEN) {
+      const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      message.requestId = requestId;
+
+      const listener = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.requestId === requestId || (data.type === 'PONG' && message.action === 'ping')) {
+            // If it's a progress update, don't close the listener yet
+            if (data.type === 'PROGRESS') {
+              callback(data);
+            } else {
+              // Final response (TRANSCRIPT or ERROR)
+              this.ws.removeEventListener('message', listener);
               callback(data);
             }
-          } catch (e) { /* ignore */ }
-        };
-        targetWs.addEventListener('message', listener);
-        targetWs.send(JSON.stringify(message));
-      } else {
-        const state = targetWs ? targetWs.readyState : 'null';
-        console.warn(`WS Not Open. State: ${state}, Explicit: ${!!explicitSocket}`);
-        callback({ type: 'ERROR', message: 'WebSocket not connected' });
-      }
-    } else {
-      callback({ type: 'ERROR', message: 'No connection mode active' });
+          }
+        } catch (e) { }
+      };
+      this.ws.addEventListener('message', listener);
+      this.ws.send(JSON.stringify(message));
+      return;
     }
+
+    // 2. Extension (Fallback for 'auto', or explicit)
+    if ((target === 'auto' || target === 'extension') && this.isExtensionConnected && this.extensionId) {
+      if (window.chrome && window.chrome.runtime) {
+        try {
+          window.chrome.runtime.sendMessage(this.extensionId, message, (res) => {
+            if (window.chrome.runtime.lastError) {
+              console.warn("Extension Message Error:", window.chrome.runtime.lastError);
+              callback({ type: 'ERROR', message: window.chrome.runtime.lastError.message });
+            } else {
+              callback(res);
+            }
+          });
+        } catch (e) {
+          callback({ type: 'ERROR', message: e.message });
+        }
+        return;
+      }
+    }
+
+    // 3. Failure
+    callback({ type: 'ERROR', message: `No active connection for target: ${target}` });
   }
 
   getActiveExtensionId() {
-    // If connected via extension, return that ID.
-    // If not, return the first one as a default fallback for UI hints, or null.
     return this.extensionId || POSSIBLE_EXTENSION_IDS[0];
   }
 }
 
 const nativeClient = new NativeHostClient();
+
+// Helper to identify unique videos (ignoring different stream formats)
+const getVideoFingerprint = (url) => {
+  try {
+    if (url.includes('entryId/')) {
+      const match = url.match(/entryId\/([^\/]+)/);
+      if (match) return `kaltura:${match[1]}`;
+    }
+    if (url.includes('youtu')) {
+      if (url.includes('v=')) return `youtube:${url.split('v=')[1].split('&')[0]}`;
+      if (url.includes('/embed/')) return `youtube:${url.split('/embed/')[1].split('?')[0]}`;
+    }
+  } catch (e) { }
+  return url;
+};
 
 function App() {
   // Tabs State
@@ -163,6 +214,8 @@ function App() {
   const [loginLoading, setLoginLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [nativeHostConnected, setNativeHostConnected] = useState(false);
+  const [isWsConnected, setIsWsConnected] = useState(false);
+  const [isExtConnected, setIsExtConnected] = useState(false);
   const [extensionId, setExtensionId] = useState(POSSIBLE_EXTENSION_IDS[0]); // Default to first for initial state
 
   // Popup State
@@ -211,6 +264,50 @@ function App() {
   const [lastMetrics, setLastMetrics] = useState(null);
   const [lastProfile, setLastProfile] = useState(null);
   const [viewingSavedNotes, setViewingSavedNotes] = useState(false);
+
+  // Track processed URLs to prevent duplicates
+  const processedUrlsRef = useRef(new Set());
+
+  // Subscribe to Extension Control Messages
+  useEffect(() => {
+    const unsubscribe = nativeClient.addListener((msg) => {
+      if (msg.action === 'FOUND_VIDEOS_UPDATE') {
+        console.log("[App] Received delayed video find update:", msg.videos);
+
+        // Deduplicate and Add
+        const uniqueBatch = [];
+        const seenInBatch = new Set();
+
+        // 1. Unique-ify the incoming batch first
+        msg.videos.forEach(v => {
+          const fp = getVideoFingerprint(v.url);
+          if (!seenInBatch.has(fp)) {
+            seenInBatch.add(fp);
+            uniqueBatch.push(v);
+          }
+        });
+
+        // 2. Process the unique batch
+        uniqueBatch.forEach((video, index) => {
+          const fingerprint = getVideoFingerprint(video.url);
+
+          // Global dedupe check (have we seen this anytime this session?)
+          if (processedUrlsRef.current.has(fingerprint)) return;
+          processedUrlsRef.current.add(fingerprint);
+
+          setTimeout(() => {
+            const videoTab = {
+              title: `${video.title || 'Video'} ${index + 1} (Found)`,
+              url: video.url,
+              initialStatus: 'transcribing'
+            };
+            startRapidTranscription(videoTab);
+          }, index * 200);
+        });
+      }
+    });
+    return unsubscribe;
+  }, []);
 
   // Translation State
   const [translationEnabled, setTranslationEnabled] = useState(false);
@@ -349,6 +446,8 @@ function App() {
     isRecording: status === 'recording'
   });
 
+  const assistScrollRef = useAutoScroll([assistMessages]);
+
   // Audio Recording State
   const mediaRecorder = useRef(null);
   const audioChunks = useRef([]);
@@ -465,17 +564,32 @@ function App() {
   }, [nativeHostConnected]);
 
   // Check Native Host Connection
-  useEffect(() => {
-    const checkConnection = async () => {
-      console.log("🕵️‍♂️ Checking connection...");
-      const connected = await nativeClient.connect();
-      console.log("🕵️‍♂️ Connection Result:", connected);
-      setNativeHostConnected(!!connected);
-      if (connected) {
-        setExtensionId(nativeClient.getActiveExtensionId());
-      }
-    };
+  const [connectionCheckLoading, setConnectionCheckLoading] = useState(false);
 
+  const checkConnection = async () => {
+    setConnectionCheckLoading(true);
+    // console.log("🕵️‍♂️ Checking connection...");
+    await nativeClient.connect();
+
+    const wsOk = nativeClient.isWsConnected;
+    const extOk = nativeClient.isExtensionConnected;
+
+    setIsWsConnected(wsOk);
+    setIsExtConnected(extOk);
+
+    const fullyConnected = wsOk && extOk;
+    console.log(`🕵️‍♂️ Connection Result: WS=${wsOk}, EXT=${extOk} => FULL=${fullyConnected}`);
+
+    setNativeHostConnected(fullyConnected);
+
+    if (extOk) {
+      setExtensionId(nativeClient.getActiveExtensionId());
+    }
+    setConnectionCheckLoading(false);
+  };
+
+  // Check Native Host Connection
+  useEffect(() => {
     // Check immediately
     checkConnection();
     // Retry once after 2 seconds
@@ -582,6 +696,16 @@ function App() {
           model: nativeModel,
           language: 'en'
         }, (response) => {
+          // Handle PROGRESS
+          if (response && response.type === 'PROGRESS') {
+            const percent = response.percent || 0;
+            // Update queue state live
+            setTranscribeQueue(prev => prev.map(j => j.id === nextJob.id ? { ...j, status: 'processing', progress: percent } : j));
+            // Update ref so logic that checks ref sees it (though ref updates are not reactive, safe to ignore for UI, but good for coherence)
+            queueRef.current = queueRef.current.map(j => j.id === nextJob.id ? { ...j, status: 'processing', progress: percent } : j);
+            return;
+          }
+
           if (!response || response.type === 'ERROR') {
             console.warn("Native Host Transcription Failed, falling back to worker:", response);
             // Fallback to worker
@@ -599,54 +723,70 @@ function App() {
   };
 
   const handleJobCompletion = async (jobId, text) => {
-    // Check translation
-    let finalText = text;
-    if (translationEnabled && translatorReady) {
-      try {
-        finalText = await translator.translate(text);
-      } catch (e) {
-        console.error("Auto-translation failed for job", e);
-      }
-    }
-
-    const job = queueRef.current.find(j => j.id === jobId) || activeJobRef.current;
-
-    // For non-queued jobs (e.g., mic/system audio), fall back to the legacy flow
-    if (!job && !queueRef.current.length) {
-      activeJobRef.current = null;
-      setTranscription(finalText);
-      // Also update translatedText state so the view knows it matches
-      if (translationEnabled) setTranslatedText(finalText);
-
-      setStatus('complete');
-      saveToHistory(`Transcription ${new Date().toLocaleTimeString()}`, finalText, 'transcription', selectedModel);
-      return;
-    }
-
-    const remaining = queueRef.current.filter(j => j.id !== jobId);
-    queueRef.current = remaining;
-    setTranscribeQueue(remaining);
-
-    if (job) {
-      const completed = { ...job, status: 'completed', progress: 100, transcript: finalText };
-      setCompletedTranscriptions(prev => [...prev, completed]);
-      setTranscription(text); // Handle legacy "last transcription" state? Or maybe this should be finalText too? 
-
-      const historyItem = saveToHistory(historyName, finalText, 'transcription', selectedModel);
-
-      // Auto-generate generic notes and update history
-      generateFullNotes(finalText).then(notes => {
-        if (historyItem && historyItem.id) {
-          updateHistoryItem(historyItem.id, { notes });
+    try {
+      // Check translation
+      let finalText = text;
+      if (translationEnabled && translatorReady) {
+        try {
+          finalText = await translator.translate(text);
+        } catch (e) {
+          console.error("Auto-translation failed for job", e);
         }
-      });
-    }
+      }
 
-    activeJobRef.current = null;
-    if (remaining.some(j => j.status === 'pending')) {
-      startNextJob();
-    } else {
-      setStatus('complete');
+      const job = queueRef.current.find(j => j.id === jobId) || activeJobRef.current;
+
+      // For non-queued jobs (e.g., mic/system audio), fall back to the legacy flow
+      if (!job && !queueRef.current.length) {
+        activeJobRef.current = null;
+        setTranscription(finalText);
+        // Also update translatedText state so the view knows it matches
+        if (translationEnabled) setTranslatedText(finalText);
+
+        setStatus('complete');
+        saveToHistory(`Transcription ${new Date().toLocaleTimeString()}`, finalText, 'transcription', selectedModel);
+        return;
+      }
+
+      // Remove job from queue
+      const remaining = queueRef.current.filter(j => j.id !== jobId);
+      queueRef.current = remaining;
+      setTranscribeQueue(remaining);
+
+      if (job) {
+        const completed = { ...job, status: 'completed', progress: 100, transcript: finalText };
+        setCompletedTranscriptions(prev => [...prev, completed]);
+        setTranscription(text);
+
+        try {
+          const historyItem = saveToHistory(historyName, finalText, 'transcription', selectedModel);
+
+          // Auto-generate generic notes and update history
+          generateFullNotes(finalText).then(notes => {
+            if (historyItem && historyItem.id) {
+              updateHistoryItem(historyItem.id, { notes });
+            }
+          });
+        } catch (hErr) {
+          console.error("History save failed:", hErr);
+        }
+      }
+
+      activeJobRef.current = null;
+
+      // Decide next step
+      if (remaining.some(j => j.status === 'pending')) {
+        startNextJob();
+      } else {
+        console.log("[JobComplete] All jobs finished. Setting status to complete.");
+        setStatus('complete');
+        // Ensure we are not stuck in transcribing if something weird happened
+      }
+    } catch (criticalError) {
+      console.error("CRITICAL Job Completion Error:", criticalError);
+      activeJobRef.current = null;
+      setStatus('error');
+      showAlert(`Transcription finished but post-processing failed: ${criticalError.message}`);
     }
   };
 
@@ -818,29 +958,139 @@ function App() {
       setStatus('transcribing');
       setShowTabSelector(false); // Close modal
 
+      const initialStatus = tab.initialStatus || 'finding video...';
       const queueId = Date.now();
-      setWebQueue(prev => [...prev, { id: queueId, title: tab.title, url: tab.url, status: 'processing' }]);
+      setWebQueue(prev => [...prev, { id: queueId, title: tab.title, url: tab.url, status: initialStatus }]);
 
       // Safety timeout - if extension doesn't reply in 30s, assume it failed/crashed
-      const safetyTimeout = setTimeout(() => {
-        console.error("[RapidTranscribe] TIMEOUT: No response from extension after 30 seconds.");
-        showAlert("Timeout: The extension did not respond.\n\nPossible causes:\n1. Native Host is not running or crashed.\n2. Extension is stuck.\n\nPlease check the logs.");
-        setStatus('idle');
-        setWebQueue(prev => prev.filter(item => item.id !== queueId));
-      }, 30000);
+      // Safety timeout - Increased to 120s for long downloads
+      let safetyTimeout = setTimeout(() => {
+        console.error("[RapidTranscribe] TIMEOUT: No response from extension after 120 seconds.");
+        // Only show alert if we are still processing (queueId still in queue)
+        setWebQueue(prev => {
+          const stillPending = prev.some(item => item.id === queueId);
+          if (stillPending) {
+            showAlert("Timeout: The extension did not respond in 120s.\n\nThe transcription might still be running in the background. Please check the extension popup.");
+            setStatus('idle');
+            return prev.filter(item => item.id !== queueId);
+          }
+          return prev;
+        });
+      }, 120000);
 
-      window.chrome.runtime.sendMessage(extensionId, {
+      // Determine Routing Strategy
+      const isCanvas = tab.url && CANVAS_DOMAINS.some(d => tab.url.includes(d));
+      const routeTarget = isCanvas ? 'extension' : 'auto';
+
+      if (isCanvas) {
+        console.log("⚠️ Canvas/Kaltura URL detected. Forcing routing via Extension for automation.");
+        if (!nativeClient.isExtensionConnected) {
+          clearTimeout(safetyTimeout);
+          showAlert("Canvas Transcription requires the Chrome Extension.\n\nPlease enable the extension to automate the capture of this video.");
+          setStatus('idle');
+          setWebQueue(prev => prev.filter(item => item.id !== queueId));
+          return;
+        }
+      }
+
+      // Use nativeClient for consistent message passing
+      nativeClient.sendMessage({
         action: "transcribe_url",
         url: tab.url,
-        // We can pass tabId if extension needs it to focus/highlight
         source: "web_client_rapid"
       }, (res) => {
+        // Handle Progress Updates
+        if (res && res.type === 'PROGRESS') {
+          console.log(`[RapidTranscribe] Progress: ${res.percent}%`);
+          // Reset Timeout
+          clearTimeout(safetyTimeout);
+          // Re-arm timeout (another 120s from now)
+          safetyTimeout = setTimeout(() => {
+            console.error("[RapidTranscribe] TIMEOUT (after progress update)");
+            setWebQueue(prev => {
+              if (prev.some(item => item.id === queueId)) {
+                showAlert("Timeout: Transcription stopped responding.");
+                setStatus('idle');
+                return prev.filter(item => item.id !== queueId);
+              }
+              return prev;
+            });
+          }, 120000);
+
+          // Update UI Status
+          setWebQueue(prev => prev.map(item => {
+            if (item.id === queueId) {
+              return { ...item, status: `transcribing (${res.percent}%)` };
+            }
+            return item;
+          }));
+          return; // Don't process final logic yet
+        }
+
+        if (res && res.type === 'WAITING_FOR_MANUAL_PLAY') {
+          console.log("[RapidTranscribe] Waiting for user to play video...");
+
+          // Re-arm timeout to give user time (5 minutes)
+          clearTimeout(safetyTimeout);
+          safetyTimeout = setTimeout(() => {
+            console.error("[RapidTranscribe] TIMEOUT (waiting for manual play)");
+            setWebQueue(prev => {
+              if (prev.some(item => item.id === queueId)) {
+                showAlert("Timeout: No video playback detected within 5 minutes.");
+                setStatus('idle');
+                return prev.filter(item => item.id !== queueId);
+              }
+              return prev;
+            });
+          }, 300000);
+
+          // Update UI Status
+          setWebQueue(prev => prev.map(item => {
+            if (item.id === queueId) {
+              return { ...item, status: 'Waiting for video play...' };
+            }
+            return item;
+          }));
+
+          if (!window.hasShownPlayAlert) {
+            window.hasShownPlayAlert = true;
+            showAlert("Extension Ready: Please press PLAY on the video in your other tab to begin.");
+          }
+          return;
+        }
+
+        if (res && res.type === 'FOUND_VIDEOS') {
+          console.log(`[RapidTranscribe] Found ${res.videos.length} videos`);
+          clearTimeout(safetyTimeout);
+
+          // Remove the "Scanning" placeholder
+          setWebQueue(prev => prev.filter(item => item.id !== queueId));
+
+          // Queue the found videos
+          res.videos.forEach((video, index) => {
+            // Recursively call with the DIRECT URL
+            // set timeout to stagger them slightly so IDs don't collide
+            setTimeout(() => {
+              // Mock a tab object
+              const videoTab = {
+                title: `${video.title || 'Video'} ${index + 1} (${tab.title})`,
+                url: video.url,
+                initialStatus: 'transcribing' // Explicitly set status for found videos
+              };
+              startRapidTranscription(videoTab);
+            }, index * 200);
+          });
+          return;
+        }
+
         clearTimeout(safetyTimeout);
         console.log("[RapidTranscribe] Raw callback received from extension:", res);
+
         if (window.chrome.runtime.lastError) {
           console.error("[RapidTranscribe] Runtime Error:", window.chrome.runtime.lastError);
           showAlert(`Transcription Error: ${window.chrome.runtime.lastError.message}`);
           setStatus('idle');
+          setWebQueue(prev => prev.filter(item => item.id !== queueId)); // Remove failed item
           return;
         }
 
@@ -911,7 +1161,7 @@ function App() {
             setWebQueue(prev => prev.filter(item => item.id !== queueId));
           }
         }
-      });
+      }, routeTarget);
     } catch (e) {
       console.error("[RapidTranscribe] Exception:", e);
       showAlert("Error starting transcription: " + e.message);
@@ -930,26 +1180,16 @@ function App() {
 
   const handleRapidTranscribeClick = () => {
     try {
-      if (!window.chrome || !window.chrome.runtime) {
-        console.error("Rapid Transcribe Check Failed details:", {
-          hasChrome: !!window.chrome,
-          hasRuntime: !!(window.chrome && window.chrome.runtime),
-          userAgent: navigator.userAgent
-        });
-        showAlert(`Extension not detected!\n\nTroubleshooting:\n1. Ensure 'Resonote' extension is installed.\n2. Go to chrome://extensions and click 'Reload' on the extension.\n3. Refresh this page.\n4. Ensure you are on http://localhost:5173 (or allowed domain).`);
-        return;
-      }
-
-      // Check if native host is connected
+      // 1. Check if EXTENSION is connected (Required for Tabs)
+      // 1. Check if BOTH are connected (Required for Full Feature)
       if (!nativeHostConnected) {
-        setShowSlowPopup(true); // Reuse the slow popup to prompt download
+        setShowSlowPopup(true);
         return;
       }
 
       console.log("Rapid Transcribe Clicked. Fetching available tabs...");
       setTabsLoading(true);
 
-      // Timeout for GET_TABS
       const timeoutId = setTimeout(() => {
         if (tabsLoading) {
           setTabsLoading(false);
@@ -992,48 +1232,83 @@ function App() {
       return;
     }
 
-    try {
-      if (!window.chrome || !window.chrome.runtime) {
-        showAlert("Extension not detected! Please ensure the Resonote extension is installed.");
-        return;
-      }
+    // 1. Check Connection (Native Host Required)
+    // 1. Check Connection (Native Host Required)
+    if (!nativeHostConnected) {
+      setShowSlowPopup(true);
+      return;
+    }
 
+    try {
       console.log("Starting URL Transcription for:", urlInput);
       setStatus('transcribing');
 
       const queueId = Date.now();
-      setWebQueue(prev => [...prev, { id: queueId, title: urlInput, url: urlInput, status: 'processing' }]);
+      setWebQueue(prev => [...prev, { id: queueId, title: urlInput, url: urlInput, status: 'finding video...' }]);
 
-
-      const safetyTimeout = setTimeout(() => {
+      let safetyTimeout = setTimeout(() => {
         console.error("[UrlTranscribe] TIMEOUT");
-        showAlert("Timeout: The extension did not respond.");
+        showAlert("Timeout: The Native App did not respond in 60 seconds.");
         setStatus('idle');
         setWebQueue(prev => prev.filter(item => item.id !== queueId));
-      }, 30000);
+      }, 60000); // Increased to 60s
 
-      window.chrome.runtime.sendMessage(extensionId, {
+      // Use Universal Client (Auto Strategy: Prefer WS, unless Canvas)
+      const isCanvas = urlInput && CANVAS_DOMAINS.some(d => urlInput.includes(d));
+      const routeTarget = isCanvas ? 'extension' : 'auto';
+
+      if (isCanvas) {
+        console.log("⚠️ Canvas/Kaltura URL detected. Forcing routing via Extension for automation.");
+        if (!nativeClient.isExtensionConnected) {
+          clearTimeout(safetyTimeout);
+          showAlert("Canvas Transcription requires the Chrome Extension.\n\nPlease enable the extension to automate the capture of this video.");
+          setStatus('idle');
+          setWebQueue(prev => prev.filter(item => item.id !== queueId));
+          return;
+        }
+      }
+
+      nativeClient.sendMessage({
         action: "transcribe_url",
         url: urlInput,
         source: "web_client_url"
       }, (res) => {
+        // Handle Progress Updates
+        if (res && res.type === 'PROGRESS') {
+          // Reset Timeout
+          clearTimeout(safetyTimeout);
+          // Re-arm timeout
+          safetyTimeout = setTimeout(() => {
+            showAlert("Timeout: Native Host stopped responding.");
+            setStatus('idle');
+            setWebQueue(prev => prev.filter(item => item.id !== queueId));
+          }, 120000);
+
+          setWebQueue(prev => prev.map(item => {
+            if (item.id === queueId) {
+              return { ...item, status: `transcribing (${res.percent}%)` };
+            }
+            return item;
+          }));
+          return;
+        }
+
         clearTimeout(safetyTimeout);
-        if (window.chrome.runtime.lastError) {
-          console.error("[UrlTranscribe] Runtime Error:", window.chrome.runtime.lastError);
-          showAlert(`Error: ${window.chrome.runtime.lastError.message}`);
+
+        // Handle WS or Extension 'Last Error' if emulated or passed
+        if (res && res.type === 'ERROR') {
+          console.error("[UrlTranscribe] Error:", res.message);
+          showAlert(`Failed: ${res.message}`);
           setStatus('idle');
+          setWebQueue(prev => prev.filter(item => item.id !== queueId));
           return;
         }
 
         if (res && res.type === 'TRANSCRIPT') {
           setTranscription(res.text);
           setStatus('idle');
-          // showAlert("Transcription Complete!");
-          setUrlInput('');
+          if (window.innerWidth >= 768) setUrlInput(''); // Clear input if on desktop
           setWebQueue(prev => prev.filter(item => item.id !== queueId));
-
-          // Auto-generate generic notes
-          // generateFullNotes(res.text); // Moved inside async block below
 
           // Save to history with AI naming
           (async () => {
@@ -1052,21 +1327,22 @@ function App() {
               }
             });
           })();
-        } else if (res && (res.error || res.type === 'ERROR')) {
-          showAlert(`Failed: ${res.error || res.message}`);
-          setStatus('idle');
-          setWebQueue(prev => prev.filter(item => item.id !== queueId));
         } else {
+          // Unknown response or non-error but not transcript?
+          console.warn("[UrlTranscribe] Unexpected response:", res);
           setStatus('idle');
           setWebQueue(prev => prev.filter(item => item.id !== queueId));
         }
-      });
+      }, routeTarget);
+
     } catch (error) {
       console.error("URL Transcribe Error:", error);
       showAlert("Error: " + error.message);
       setStatus('idle');
     }
   };
+
+
 
   // Special Web Feature: Record "Background" (System Audio) via Screen Share
   const startSystemAudioRecording = async () => {
@@ -1412,6 +1688,30 @@ function App() {
         setTranscribeQueue([]);
       }
     }
+  };
+
+  const handleRemoveWebQueueItem = (id) => {
+    setWebQueue(prev => {
+      const remaining = prev.filter(item => item.id !== id);
+      if (remaining.length === 0) {
+        setStatus('idle');
+      }
+      return remaining;
+    });
+  };
+
+  const handleRemoveTranscribeQueueItem = (id) => {
+    setTranscribeQueue(prev => {
+      const newQueue = prev.filter(item => item.id !== id);
+      queueRef.current = newQueue;
+
+      if (newQueue.length === 0) {
+        setStatus('idle');
+      }
+      return newQueue;
+    });
+    // If it was the active job, we ideally cancel it, but for V1 just removing from UI is okay.
+    // The worker will finish and try to update a non-existent item (or we should add a check).
   };
 
   // --- Render ---
@@ -1772,7 +2072,7 @@ function App() {
                     )}
                     {liveSubTab === 'assist' && (
                       <div className="chat-container live-chat-container">
-                        <div className="chat-messages" ref={(el) => { if (el) el.scrollTop = el.scrollHeight; }}>
+                        <div className="chat-messages" ref={assistScrollRef}>
                           {assistMessages.map((msg, idx) => (
                             <div key={idx} className={`message ${msg.role}`}>
                               {msg.content}
@@ -1874,12 +2174,22 @@ function App() {
                         <h5 style={{ margin: '0 0 12px 0', fontSize: '13px', color: 'var(--gray)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Processing Queue</h5>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                           {webQueue.map(item => (
-                            <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', background: '#F8FAFC', borderRadius: '8px', border: '1px solid var(--gray-light)' }}>
+                            <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', background: '#F8FAFC', borderRadius: '8px', border: '1px solid var(--gray-light)', position: 'relative' }}>
                               <i className="fas fa-spinner fa-spin" style={{ color: 'var(--primary)', fontSize: '18px' }}></i>
                               <div style={{ flex: 1, overflow: 'hidden' }}>
                                 <div style={{ fontSize: '14px', fontWeight: '500', color: 'var(--dark)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.title || item.url}</div>
-                                <div style={{ fontSize: '12px', color: 'var(--gray)' }}>Transcribing...</div>
+                                <div style={{ fontSize: '12px', color: 'var(--gray)' }}>{item.status}</div>
                               </div>
+                              <button
+                                className="remove-file"
+                                onClick={() => handleRemoveWebQueueItem(item.id)}
+                                style={{
+                                  background: 'none', border: 'none', color: '#EF4444',
+                                  cursor: 'pointer', padding: '4px', fontSize: '16px'
+                                }}
+                              >
+                                <i className="fas fa-times"></i>
+                              </button>
                             </div>
                           ))}
                         </div>
@@ -1963,7 +2273,7 @@ function App() {
                     )}
                     {outputSubTab === 'assist' && (
                       <div className="chat-container live-chat-container">
-                        <div className="chat-messages" ref={(el) => { if (el) el.scrollTop = el.scrollHeight; }}>
+                        <div className="chat-messages" ref={assistScrollRef}>
                           {assistMessages.map((msg, idx) => (
                             <div key={idx} className={`message ${msg.role}`}>
                               {msg.content}
@@ -2157,6 +2467,14 @@ function App() {
                                         ></div>
                                       </div>
                                     </div>
+                                    <div className="queue-actions" style={{ marginLeft: '12px' }}>
+                                      <button
+                                        className="remove-file"
+                                        onClick={() => handleRemoveTranscribeQueueItem(job.id)}
+                                      >
+                                        <i className="fas fa-times"></i>
+                                      </button>
+                                    </div>
                                   </div>
                                 ))}
                               </div>
@@ -2210,7 +2528,7 @@ function App() {
 
                       {outputSubTab === 'assist' && (
                         <div className="chat-container live-chat-container">
-                          <div className="chat-messages" ref={(el) => { if (el) el.scrollTop = el.scrollHeight; }}>
+                          <div className="chat-messages" ref={assistScrollRef}>
                             {assistMessages.map((msg, idx) => (
                               <div key={idx} className={`message ${msg.role}`}>
                                 {msg.content}
@@ -2381,7 +2699,7 @@ function App() {
         )
       }
 
-      {/* Slow Transcription Popup */}
+      {/* Slow Transcription / Missing Component Popup */}
       {
         showSlowPopup && (
           <div className="modal-overlay">
@@ -2390,15 +2708,57 @@ function App() {
               <div className="modal-icon-large">
                 <i className="fas fa-tachometer-alt"></i>
               </div>
-              <h3 className="modal-title">Taking too long?</h3>
-              <p className="modal-text">Web browsers throttle performance. Download the desktop app for <strong>10x faster</strong> transcription speeds!</p>
+
+              {!isWsConnected && !isExtConnected ? (
+                <>
+                  <h3 className="modal-title">Complete Your Setup</h3>
+                  <p className="modal-text">You are missing <strong>both components</strong> required for the best experience.</p>
+                </>
+              ) : !isWsConnected ? (
+                <>
+                  <h3 className="modal-title">Desktop App Required</h3>
+                  <p className="modal-text" style={{ marginBottom: '16px' }}>
+                    To use Rapid Transcribe, you must have the Desktop App <strong>installed AND running</strong>.
+                  </p>
+                  <ol style={{ textAlign: 'left', margin: '0 0 20px 20px', color: '#666', fontSize: '14px', lineHeight: '1.6' }}>
+                    <li>Download the app below (if you haven't already).</li>
+                    <li><strong>Launch the app</strong> and keep it open.</li>
+                    <li>Click the button below to retry.</li>
+                  </ol>
+                  <button
+                    className="btn btn-primary btn-block"
+                    onClick={checkConnection}
+                    disabled={connectionCheckLoading}
+                    style={{ marginBottom: '16px' }}
+                  >
+                    {connectionCheckLoading ? <i className="fas fa-spinner fa-spin"></i> : <i className="fas fa-sync-alt"></i>}
+                    {connectionCheckLoading ? ' Checking...' : ' I have opened the app'}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <h3 className="modal-title">Extension Required</h3>
+                  <p className="modal-text">Install the helper extension to enable seamless browser communication.</p>
+                </>
+              )}
+
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <a href="https://github.com/tusharj03/transcribelandingpage/releases/download/v1.0.5/Resonote_Background_Service_Setup.exe" className="btn btn-primary btn-block" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', textDecoration: 'none' }}>
-                  <i className="fab fa-windows"></i> Download for Windows
-                </a>
-                <a href="https://github.com/tusharj03/transcribelandingpage/releases/download/v1.0.5/Resonote_Background_Service.pkg" className="btn btn-primary btn-block" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: '#333', borderColor: '#333', textDecoration: 'none' }}>
-                  <i className="fab fa-apple"></i> Download for Mac
-                </a>
+                {(!isWsConnected) && (
+                  <>
+                    <a href="https://github.com/tusharj03/transcribelandingpage/releases/download/v1.0.5/Resonote_Background_Service_Setup.exe" className="btn btn-outline btn-block" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', textDecoration: 'none' }}>
+                      <i className="fab fa-windows"></i> Download for Windows
+                    </a>
+                    <a href="https://github.com/tusharj03/transcribelandingpage/releases/download/v1.0.5/Resonote_Background_Service.pkg" className="btn btn-outline btn-block" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: 'transparent', borderColor: '#ddd', color: '#333', textDecoration: 'none' }}>
+                      <i className="fab fa-apple"></i> Download for Mac
+                    </a>
+                  </>
+                )}
+
+                {(!isExtConnected) && (
+                  <a href="https://chromewebstore.google.com/detail/resonote-extension/iddimggbohccfikpkeelhaceooojfiga" target="_blank" rel="noreferrer" className="btn btn-outline btn-block" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', textDecoration: 'none' }}>
+                    <i className="fab fa-chrome"></i> Get Chrome Extension
+                  </a>
+                )}
               </div>
             </div>
           </div>
