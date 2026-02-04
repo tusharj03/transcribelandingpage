@@ -577,7 +577,7 @@ function App() {
     setIsWsConnected(wsOk);
     setIsExtConnected(extOk);
 
-    const fullyConnected = wsOk && extOk;
+    const fullyConnected = wsOk || extOk;
     console.log(`🕵️‍♂️ Connection Result: WS=${wsOk}, EXT=${extOk} => FULL=${fullyConnected}`);
 
     setNativeHostConnected(fullyConnected);
